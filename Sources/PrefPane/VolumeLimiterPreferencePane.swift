@@ -20,10 +20,13 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     private let currentVolumeValueLabel = NSTextField(labelWithString: localized("value.unavailable"))
     private let deviceTitleLabel = NSTextField(labelWithString: localized("device.title"))
     private let deviceValueLabel = NSTextField(labelWithString: localized("value.unavailable"))
-    private let daemonStatusLabel = NSTextField(labelWithString: "")
-    private let diagnosticsLabel = NSTextField(labelWithString: "")
+    private let warningTitleLabel = NSTextField(labelWithString: "")
+    private let warningDetailLabel = NSTextField(labelWithString: "")
 
-    private var limitRow: NSView?
+    private var warningCard: NSView?
+    private var limitCard: NSView?
+    private var optionsSection: NSView?
+    private var optionsCard: NSView?
 
     public override func loadMainView() -> NSView {
         let rootView = NSView(frame: NSRect(x: 0, y: 0, width: 620, height: 560))
@@ -31,26 +34,29 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         configureControls()
 
         let header = makeHeaderCard()
-        let limitCard = makeLimitCard()
-        let optionsCard = makeOptionsCard()
-        let optionsSection = sectionLabel(localized("section.options"))
-        let footer = makeFooter()
+        let warning = makeWarningCard()
+        let limit = makeLimitCard()
+        let options = makeOptionsCard()
+        let optionsHeading = sectionLabel(localized("section.options"))
+
+        warningCard = warning
+        limitCard = limit
+        optionsSection = optionsHeading
+        optionsCard = options
+        warning.isHidden = true
 
         let outerStack = NSStackView(views: [
             header,
-            limitCard,
-            optionsSection,
-            optionsCard,
-            footer
+            warning,
+            limit,
+            optionsHeading,
+            options
         ])
         outerStack.orientation = .vertical
         outerStack.alignment = .leading
-        outerStack.spacing = 10
+        outerStack.spacing = 14
         outerStack.translatesAutoresizingMaskIntoConstraints = false
-        outerStack.setCustomSpacing(18, after: header)
-        outerStack.setCustomSpacing(20, after: limitCard)
-        outerStack.setCustomSpacing(6, after: optionsSection)
-        outerStack.setCustomSpacing(18, after: optionsCard)
+        outerStack.setCustomSpacing(6, after: optionsHeading)
 
         rootView.addSubview(outerStack)
         NSLayoutConstraint.activate([
@@ -59,9 +65,9 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             outerStack.topAnchor.constraint(equalTo: rootView.topAnchor, constant: 20),
             outerStack.bottomAnchor.constraint(lessThanOrEqualTo: rootView.bottomAnchor, constant: -20),
             header.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
-            limitCard.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
-            optionsCard.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
-            footer.widthAnchor.constraint(equalTo: outerStack.widthAnchor)
+            warning.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
+            limit.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
+            options.widthAnchor.constraint(equalTo: outerStack.widthAnchor)
         ])
 
         mainView = rootView
@@ -142,12 +148,9 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     @objc private func launchAtLoginChanged(_ sender: NSSwitch) {
         do {
             try LaunchAgentManager.setEnabled(sender.state == .on)
-            daemonStatusLabel.stringValue = sender.state == .on
-                ? localizedFormat("launchAgent.enabled", LaunchAgentManager.label)
-                : localized("launchAgent.disabled")
         } catch {
-            daemonStatusLabel.stringValue = localizedFormat("launchAgent.error", error.localizedDescription)
-            launchAtLoginSwitch.state = LaunchAgentManager.isEnabled ? .on : .off
+            sender.state = LaunchAgentManager.isEnabled ? .on : .off
+            presentError(localizedFormat("launchAgent.error", error.localizedDescription))
         }
     }
 
@@ -171,12 +174,15 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         }
     }
 
-    @objc private func refreshButtonPressed(_: NSButton) {
-        refreshStatus()
-    }
-
-    @objc private func showDaemonStartCommand(_: NSButton) {
-        daemonStatusLabel.stringValue = localized("daemon.startCommand")
+    private func presentError(_ message: String) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = message
+        if let window = mainView.window {
+            alert.beginSheetModal(for: window, completionHandler: nil)
+        } else {
+            alert.runModal()
+        }
     }
 
     private func refreshStatus() {
@@ -235,42 +241,62 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
 
         let limiterEnabled = response.enabled ?? false
         masterSwitch.state = limiterEnabled ? .on : .off
-        updateAvailability(daemonAvailable: true, limiterEnabled: limiterEnabled)
-
-        let enabledText = limiterEnabled ? localized("state.on") : localized("state.off")
-        let controlText = (response.volumeControlAvailable ?? false)
-            ? localized("state.available")
-            : localized("state.unavailable")
-        let headphoneText = (response.deviceIsHeadphone ?? false) ? localized("state.yes") : localized("state.no")
-        daemonStatusLabel.stringValue = localizedFormat(
-            "daemon.status",
-            enabledText,
-            controlText,
-            headphoneText
+        updateLayout(
+            daemonAvailable: true,
+            limiterEnabled: limiterEnabled,
+            volumeControlAvailable: response.volumeControlAvailable ?? false,
+            diagnostics: response.diagnostics ?? []
         )
-
-        let diagnostics = response.diagnostics ?? []
-        diagnosticsLabel.stringValue = diagnostics.isEmpty
-            ? localized("diagnostics.none")
-            : localizedFormat("diagnostics.value", diagnostics.joined(separator: " | "))
     }
 
     private func showDaemonError(_ error: Error) {
         currentVolumeValueLabel.stringValue = localized("value.unavailable")
         deviceValueLabel.stringValue = localized("value.unavailable")
-        diagnosticsLabel.stringValue = localizedFormat("diagnostics.value", error.localizedDescription)
-        daemonStatusLabel.stringValue = localized("daemon.notResponding")
-        updateAvailability(daemonAvailable: false, limiterEnabled: masterSwitch.state == .on)
+        updateLayout(
+            daemonAvailable: false,
+            limiterEnabled: masterSwitch.state == .on,
+            volumeControlAvailable: false,
+            diagnostics: [error.localizedDescription]
+        )
     }
 
-    private func updateAvailability(daemonAvailable: Bool, limiterEnabled: Bool) {
+    private func updateLayout(
+        daemonAvailable: Bool,
+        limiterEnabled: Bool,
+        volumeControlAvailable: Bool,
+        diagnostics: [String]
+    ) {
         masterSwitch.isEnabled = daemonAvailable
         headphoneOnlySwitch.isEnabled = daemonAvailable
         notifyOnLimitSwitch.isEnabled = daemonAvailable
+        limitSlider.isEnabled = daemonAvailable
 
-        let limitActive = daemonAvailable && limiterEnabled
-        limitSlider.isEnabled = limitActive
-        limitRow?.alphaValue = limitActive ? 1.0 : 0.45
+        let showControls = daemonAvailable && limiterEnabled
+        setHidden(limitCard, !showControls)
+        setHidden(optionsSection, !showControls)
+        setHidden(optionsCard, !showControls)
+
+        if !daemonAvailable {
+            warningTitleLabel.stringValue = localized("warning.daemonNotRunning")
+            warningDetailLabel.stringValue = localized("daemon.startCommand")
+            setHidden(warningCard, false)
+        } else if limiterEnabled, !volumeControlAvailable {
+            warningTitleLabel.stringValue = localized("warning.volumeControlUnavailable")
+            warningDetailLabel.stringValue = diagnostics.isEmpty
+                ? ""
+                : localizedFormat("diagnostics.value", diagnostics.joined(separator: " | "))
+            setHidden(warningCard, false)
+        } else {
+            setHidden(warningCard, true)
+        }
+        warningDetailLabel.isHidden = warningDetailLabel.stringValue.isEmpty
+    }
+
+    private func setHidden(_ view: NSView?, _ hidden: Bool) {
+        guard let view = view, view.isHidden != hidden else {
+            return
+        }
+        view.isHidden = hidden
     }
 
     private func requestID() -> String {
@@ -309,15 +335,15 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             label.widthAnchor.constraint(greaterThanOrEqualToConstant: 48).isActive = true
         }
 
-        daemonStatusLabel.font = .systemFont(ofSize: 11)
-        daemonStatusLabel.textColor = .secondaryLabelColor
-        daemonStatusLabel.lineBreakMode = .byWordWrapping
-        daemonStatusLabel.maximumNumberOfLines = 3
+        warningTitleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        warningTitleLabel.lineBreakMode = .byWordWrapping
+        warningTitleLabel.maximumNumberOfLines = 2
 
-        diagnosticsLabel.font = .systemFont(ofSize: 11)
-        diagnosticsLabel.textColor = .tertiaryLabelColor
-        diagnosticsLabel.lineBreakMode = .byWordWrapping
-        diagnosticsLabel.maximumNumberOfLines = 4
+        warningDetailLabel.font = .systemFont(ofSize: 11)
+        warningDetailLabel.textColor = .secondaryLabelColor
+        warningDetailLabel.isSelectable = true
+        warningDetailLabel.lineBreakMode = .byWordWrapping
+        warningDetailLabel.maximumNumberOfLines = 3
     }
 
     private func makeHeaderCard() -> CardView {
@@ -372,7 +398,6 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
 
     private func makeLimitCard() -> CardView {
         let limitRowView = makeRow([limitTitleLabel, limitSlider, limitValueLabel])
-        limitRow = limitRowView
         let volumeRowView = makeRow([currentVolumeTitleLabel, flexibleSpacer(), currentVolumeValueLabel])
         let deviceRowView = makeRow([deviceTitleLabel, flexibleSpacer(), deviceValueLabel])
         return makeCard(rows: [limitRowView, volumeRowView, deviceRowView])
@@ -397,38 +422,48 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         return makeCard(rows: [headphoneRow, launchRow, notifyRow])
     }
 
-    private func makeFooter() -> NSView {
-        let refreshButton = NSButton(
-            title: localized("refresh.button"),
-            target: self,
-            action: #selector(refreshButtonPressed(_:))
-        )
-        refreshButton.bezelStyle = .rounded
-
-        let openCLIHelpButton = NSButton(
-            title: localized("showStartCommand.button"),
-            target: self,
-            action: #selector(showDaemonStartCommand(_:))
-        )
-        openCLIHelpButton.bezelStyle = .rounded
-
-        let buttonRow = NSStackView(views: [refreshButton, openCLIHelpButton, flexibleSpacer()])
-        buttonRow.orientation = .horizontal
-        buttonRow.alignment = .centerY
-        buttonRow.spacing = 10
-
-        let footer = NSStackView(views: [buttonRow, daemonStatusLabel, diagnosticsLabel])
-        footer.orientation = .vertical
-        footer.alignment = .leading
-        footer.spacing = 8
-        footer.translatesAutoresizingMaskIntoConstraints = false
-
+    private func makeWarningCard() -> NSView {
+        let icon = NSImageView()
+        icon.translatesAutoresizingMaskIntoConstraints = false
+        if let base = NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: nil) {
+            let configuration = NSImage.SymbolConfiguration(pointSize: 15, weight: .semibold)
+            icon.image = base.withSymbolConfiguration(configuration) ?? base
+            icon.contentTintColor = .systemOrange
+        }
+        icon.setContentHuggingPriority(.required, for: .horizontal)
         NSLayoutConstraint.activate([
-            buttonRow.widthAnchor.constraint(equalTo: footer.widthAnchor),
-            daemonStatusLabel.widthAnchor.constraint(equalTo: footer.widthAnchor),
-            diagnosticsLabel.widthAnchor.constraint(equalTo: footer.widthAnchor)
+            icon.widthAnchor.constraint(equalToConstant: 20),
+            icon.heightAnchor.constraint(equalToConstant: 20)
         ])
-        return footer
+
+        warningTitleLabel.preferredMaxLayoutWidth = 470
+        warningDetailLabel.preferredMaxLayoutWidth = 470
+        warningDetailLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        let textStack = NSStackView(views: [warningTitleLabel, warningDetailLabel])
+        textStack.orientation = .vertical
+        textStack.alignment = .leading
+        textStack.spacing = 2
+        textStack.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        textStack.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        let row = NSStackView(views: [icon, textStack])
+        row.orientation = .horizontal
+        row.alignment = .top
+        row.distribution = .fill
+        row.spacing = 10
+        row.translatesAutoresizingMaskIntoConstraints = false
+
+        let card = CardView()
+        card.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(row)
+        NSLayoutConstraint.activate([
+            row.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
+            row.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
+            row.topAnchor.constraint(equalTo: card.topAnchor, constant: 12),
+            row.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -12)
+        ])
+        return card
     }
 
     private func optionLabel(_ text: String) -> NSTextField {
