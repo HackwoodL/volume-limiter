@@ -2,9 +2,15 @@
 
 [English](README.md)
 
+[![Latest release](https://img.shields.io/github/v/release/HackwoodL/volume-limiter)](https://github.com/HackwoodL/volume-limiter/releases/latest)
+[![下载 DMG](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-.dmg-2ea44f?logo=apple&logoColor=white)](https://github.com/HackwoodL/volume-limiter/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 ![Volume Limiter 系统设置面板截图](docs/screenshots/prefpane-system-settings.zh-CN.png)
 
 Volume Limiter 是一个轻量级 macOS 最大音量限制器。我写它是为了防止连接新耳机时音频音量过大、伤害耳朵：它把每个输出设备限制在你设定的最大音量，一旦音量超过上限就立即压回。你可以通过「系统设置」里的面板，或一个小巧的命令行工具来控制它。
+
+**[⬇ 下载最新版本](https://github.com/HackwoodL/volume-limiter/releases/latest)** —— 打开 DMG 双击 `VolumeLimiter.prefPane` 即可安装，或运行 `brew install --cask HackwoodL/tap/volume-limiter-gui`。
 
 **系统要求：** macOS 13 (Ventura) 及以上，支持 Apple Silicon 与 Intel。
 

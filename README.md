@@ -2,9 +2,15 @@
 
 [简体中文](README.zh-CN.md)
 
+[![Latest release](https://img.shields.io/github/v/release/HackwoodL/volume-limiter)](https://github.com/HackwoodL/volume-limiter/releases/latest)
+[![Download DMG](https://img.shields.io/badge/Download-.dmg-2ea44f?logo=apple&logoColor=white)](https://github.com/HackwoodL/volume-limiter/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 ![Volume Limiter prefPane in System Settings](docs/screenshots/prefpane-system-settings.png)
 
 Volume Limiter is a lightweight macOS app that caps your maximum output volume. I built it to stop a newly-connected headset from suddenly blasting audio and hurting your ears: it holds every output device to a maximum volume you choose, and pushes the volume back down the moment it goes above that limit. Control it from a pane in System Settings, or from a small command-line tool.
+
+**[⬇ Download the latest release](https://github.com/HackwoodL/volume-limiter/releases/latest)** — open the DMG and double-click `VolumeLimiter.prefPane` to install, or run `brew install --cask HackwoodL/tap/volume-limiter-gui`.
 
 **Requirements:** macOS 13 (Ventura) or later, on Apple Silicon or Intel.
 
