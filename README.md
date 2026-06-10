@@ -19,6 +19,28 @@ Volume Limiter is a lightweight macOS maximum-volume limiter. A single per-user 
 - Optional macOS notification when volume is capped.
 - No kernel extension, no virtual audio driver, no kext — and no paid certificate.
 
+## CLI
+
+```bash
+volume-limit set <0-100>            # set the default cap for all devices
+volume-limit on                     # turn the limiter on
+volume-limit off                    # turn the limiter off
+volume-limit status                 # show the full daemon status and diagnostics
+volume-limit device on|off          # enable/disable per-device caps
+volume-limit device set <uid> <n>   # cap a specific device by UID
+volume-limit device remove <uid>    # remove a device's per-device cap
+volume-limit device list            # list per-device caps and connected devices
+volume-limit headphone-only on|off  # only limit headphone-like outputs
+volume-limit --help                 # show usage
+```
+
+If the daemon is not running, the CLI prints:
+
+```text
+volume-limiterd is not running.
+Start it from System Settings > Volume Limiter, or with Homebrew: brew services start volume-limiter
+```
+
 ## Install
 
 ### Recommended: local install (works today)
@@ -60,51 +82,7 @@ swift run volume-limiter-tests
 scripts/test-cli-daemon.py
 ```
 
-## CLI
-
-```bash
-volume-limit set <0-100>            # set the default cap for all devices
-volume-limit on                     # turn the limiter on
-volume-limit off                    # turn the limiter off
-volume-limit status                 # show the full daemon status and diagnostics
-volume-limit device on|off          # enable/disable per-device caps
-volume-limit device set <uid> <n>   # cap a specific device by UID
-volume-limit device remove <uid>    # remove a device's per-device cap
-volume-limit device list            # list per-device caps and connected devices
-volume-limit headphone-only on|off  # only limit headphone-like outputs
-volume-limit --help                 # show usage
-```
-
-If the daemon is not running, the CLI prints:
-
-```text
-volume-limiterd is not running.
-Start it from System Settings > Volume Limiter, or with Homebrew: brew services start volume-limiter
-```
-
-## Architecture
-
-```text
-┌────────────────────────────────────────────────────────────┐
-│ volume-limiterd                                             │
-│ - Core Audio listeners                                      │
-│ - volume clamp policy                                       │
-│ - config owner                                              │
-│ - Unix domain socket server                                 │
-└────────────────────────────────────────────────────────────┘
-                              ▲
-                              │ /tmp/volume-limiter-$UID.sock
-                 ┌────────────┴────────────┐
-                 │                         │
-┌────────────────────────────┐ ┌────────────────────────────┐
-│ volume-limit                │ │ VolumeLimiter.prefPane     │
-│ CLI thin client             │ │ System Settings thin client│
-└────────────────────────────┘ └────────────────────────────┘
-```
-
-The daemon is the only process that calls Core Audio to read or set output volume. CLI and GUI clients only send newline-delimited JSON requests over the per-user Unix socket.
-
-## Manual release installation
+### Manual release install (GitHub Release)
 
 > Available once a GitHub Release is published. Until then, use the local install above.
 
@@ -156,6 +134,28 @@ brew uninstall volume-limiter || true
 See [`docs/TESTING.md`](docs/TESTING.md). Current coverage includes Core policy tests, notification trigger tests, IPC protocol tests, CLI parser/rendering tests, Unix socket conflict tests, real daemon + CLI smoke tests, prefPane bundle build/sign/load checks, System Settings screenshot, keyboard volume-key latency, Bluetooth reconnect, Type-C wired headset, reboot auto-start, and a short idle resource sample.
 
 Remaining follow-up validation: HDMI/AirPlay/aggregate/unsupported output devices when hardware is available, and Homebrew install/uninstall against the public tap after release SHA values are available.
+
+## Architecture
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│ volume-limiterd                                             │
+│ - Core Audio listeners                                      │
+│ - volume clamp policy                                       │
+│ - config owner                                              │
+│ - Unix domain socket server                                 │
+└────────────────────────────────────────────────────────────┘
+                              ▲
+                              │ /tmp/volume-limiter-$UID.sock
+                 ┌────────────┴────────────┐
+                 │                         │
+┌────────────────────────────┐ ┌────────────────────────────┐
+│ volume-limit                │ │ VolumeLimiter.prefPane     │
+│ CLI thin client             │ │ System Settings thin client│
+└────────────────────────────┘ └────────────────────────────┘
+```
+
+The daemon is the only process that calls Core Audio to read or set output volume. CLI and GUI clients only send newline-delimited JSON requests over the per-user Unix socket.
 
 ## Preference pane status
 
