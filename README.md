@@ -19,28 +19,6 @@ Volume Limiter is a lightweight macOS maximum-volume limiter. A single per-user 
 - Optional macOS notification when volume is capped.
 - No kernel extension, no virtual audio driver, no kext — and no paid certificate.
 
-## CLI
-
-```bash
-volume-limit set <0-100>            # set the default cap for all devices
-volume-limit on                     # turn the limiter on
-volume-limit off                    # turn the limiter off
-volume-limit status                 # show the full daemon status and diagnostics
-volume-limit device on|off          # enable/disable per-device caps
-volume-limit device set <uid> <n>   # cap a specific device by UID
-volume-limit device remove <uid>    # remove a device's per-device cap
-volume-limit device list            # list per-device caps and connected devices
-volume-limit headphone-only on|off  # only limit headphone-like outputs
-volume-limit --help                 # show usage
-```
-
-If the daemon is not running, the CLI prints:
-
-```text
-volume-limiterd is not running.
-Start it from System Settings > Volume Limiter, or with Homebrew: brew services start volume-limiter
-```
-
 ## Install
 
 ### Recommended: local install (works today)
@@ -108,6 +86,28 @@ open ~/Library/PreferencePanes/VolumeLimiter.prefPane
 
 Because I can't afford an Apple Developer Program membership, releases are ad-hoc signed and not notarized. On first launch macOS may require right-click Open, `xattr -cr`, or approving the pane from System Settings.
 
+## CLI
+
+```bash
+volume-limit set <0-100>            # set the default cap for all devices
+volume-limit on                     # turn the limiter on
+volume-limit off                    # turn the limiter off
+volume-limit status                 # show the full daemon status and diagnostics
+volume-limit device on|off          # enable/disable per-device caps
+volume-limit device set <uid> <n>   # cap a specific device by UID
+volume-limit device remove <uid>    # remove a device's per-device cap
+volume-limit device list            # list per-device caps and connected devices
+volume-limit headphone-only on|off  # only limit headphone-like outputs
+volume-limit --help                 # show usage
+```
+
+If the daemon is not running, the CLI prints:
+
+```text
+volume-limiterd is not running.
+Start it from System Settings > Volume Limiter, or with Homebrew: brew services start volume-limiter
+```
+
 ## Uninstall
 
 ### Local install
@@ -128,12 +128,6 @@ brew uninstall --cask volume-limiter-gui || true
 brew services stop volume-limiter || true
 brew uninstall volume-limiter || true
 ```
-
-## Testing
-
-See [`docs/TESTING.md`](docs/TESTING.md). Current coverage includes Core policy tests, notification trigger tests, IPC protocol tests, CLI parser/rendering tests, Unix socket conflict tests, real daemon + CLI smoke tests, prefPane bundle build/sign/load checks, System Settings screenshot, keyboard volume-key latency, Bluetooth reconnect, Type-C wired headset, reboot auto-start, and a short idle resource sample.
-
-Remaining follow-up validation: HDMI/AirPlay/aggregate/unsupported output devices when hardware is available, and Homebrew install/uninstall against the public tap after release SHA values are available.
 
 ## Architecture
 
@@ -156,6 +150,12 @@ Remaining follow-up validation: HDMI/AirPlay/aggregate/unsupported output device
 ```
 
 The daemon is the only process that calls Core Audio to read or set output volume. CLI and GUI clients only send newline-delimited JSON requests over the per-user Unix socket.
+
+## Testing
+
+See [`docs/TESTING.md`](docs/TESTING.md). Current coverage includes Core policy tests, notification trigger tests, IPC protocol tests, CLI parser/rendering tests, Unix socket conflict tests, real daemon + CLI smoke tests, prefPane bundle build/sign/load checks, System Settings screenshot, keyboard volume-key latency, Bluetooth reconnect, Type-C wired headset, reboot auto-start, and a short idle resource sample.
+
+Remaining follow-up validation: HDMI/AirPlay/aggregate/unsupported output devices when hardware is available, and Homebrew install/uninstall against the public tap after release SHA values are available.
 
 ## Preference pane status
 
