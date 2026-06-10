@@ -21,10 +21,10 @@ struct VolumeLimiterTestRunner {
         try suite.run("Core config store persists settings", testConfigStorePersistsSettings)
         try suite.run("Core per-device override clamps to device limit", testPerDeviceOverrideClampsToDeviceLimit)
         try suite.run("Core default limit applies without override", testDefaultLimitAppliesWhenNoDeviceOverride)
-        try suite.run("Core setLimit creates current-device override", testSetLimitCreatesCurrentDeviceOverride)
-        try suite.run("Core setLimit uses name key without UID", testSetLimitUsesNameKeyWhenNoUID)
-        try suite.run("Core setDefaultLimit keeps device override", testSetDefaultLimitKeepsDeviceOverride)
-        try suite.run("Core reset device limit falls back to default", testResetCurrentDeviceLimitFallsBackToDefault)
+        try suite.run("Core setLimit sets the default cap", testSetLimitSetsDefault)
+        try suite.run("Core setDeviceLimit clamps immediately", testSetDeviceLimitClampsImmediately)
+        try suite.run("Core device override beats default", testDeviceOverrideBeatsDefault)
+        try suite.run("Core remove device limit falls back to default", testRemoveDeviceLimitFallsBackToDefault)
         try suite.run("Core name fallback when UID changes", testNameFallbackWhenUIDChanges)
         try suite.run("Core config persists device limits", testConfigStorePersistsDeviceLimits)
         try suite.run("Core config decodes legacy JSON", testConfigDecodesLegacyJSONWithoutDeviceLimits)
@@ -38,8 +38,8 @@ struct VolumeLimiterTestRunner {
         try suite.run("CLI rejects invalid limit locally", testCLIRejectsInvalidLimit)
         try suite.run("CLI maps daemon connection failure", testCLIMapsDaemonConnectionFailure)
         try suite.run("CLI talks to server over Unix socket", testCLITalksToServerOverUnixSocket)
-        try suite.run("CLI default sets default limit", testCLIDefaultSendsSetDefaultLimit)
-        try suite.run("CLI reset sends resetDeviceLimit", testCLIResetSendsResetDeviceLimit)
+        try suite.run("CLI device set sends setDeviceLimit", testCLIDeviceSetSendsSetDeviceLimit)
+        try suite.run("CLI device remove sends removeDeviceLimit", testCLIDeviceRemoveSendsRemoveDeviceLimit)
         try suite.run("CLI device list renders overrides", testCLIDeviceListRendersOverrides)
 
         print("All \(suite.passed) Volume Limiter tests passed.")
@@ -316,7 +316,7 @@ private func testUnixSocketServerRejectsDuplicateActiveServer() throws {
 private func testCLISetSendsSetLimitRequest() throws {
     let client = FakeCLIClient(
         responses: [
-            IPCResponse(ok: true, id: "fixed-id", enabled: true, limit: 30)
+            IPCResponse(ok: true, id: "fixed-id", enabled: true, limit: 30, defaultLimit: 30)
         ]
     )
     let runner = VolumeLimitCommandRunner(client: client, requestID: { "fixed-id" })
@@ -324,7 +324,7 @@ private func testCLISetSendsSetLimitRequest() throws {
     let output = runner.run(arguments: ["set", "30"])
 
     try expectEqual(output.exitCode, 0)
-    try expectEqual(output.stdout, "Limit for the current device set to 30%.\n")
+    try expectEqual(output.stdout, "Default limit set to 30%.\n")
     try expectEqual(client.requests, [
         IPCRequest(id: "fixed-id", cmd: IPCCommand.setLimit.rawValue, value: 30)
     ])
@@ -405,7 +405,7 @@ private func testCLITalksToServerOverUnixSocket() throws {
 
     let setOutput = runner.run(arguments: ["set", "42"])
     try expectEqual(setOutput.exitCode, 0)
-    try expectEqual(setOutput.stdout, "Limit for Fake Speakers set to 42%.\n")
+    try expectEqual(setOutput.stdout, "Default limit set to 42%.\n")
 
     let getOutput = runner.run(arguments: ["get"])
     try expectEqual(getOutput.exitCode, 0)
@@ -441,39 +441,36 @@ private func testDefaultLimitAppliesWhenNoDeviceOverride() throws {
     try expectEqual(audio.volume, 55)
 }
 
-private func testSetLimitCreatesCurrentDeviceOverride() throws {
+private func testSetLimitSetsDefault() throws {
     let audio = FakeAudioHardware(volume: 10)
     audio.uid = "uid-x"
-    let engine = try makeEngine(audio: audio, config: try VolumeLimiterConfig(limit: 50))
-
-    let status = try engine.setLimit(60)
-
-    try expectEqual(status.limit, 60)
-    try expectEqual(status.defaultLimit, 50)
-    try expectTrue(status.deviceHasLimitOverride, "current device has override")
-    try expectEqual(status.deviceLimits["uid-x"]?.limit, 60)
-}
-
-private func testSetLimitUsesNameKeyWhenNoUID() throws {
-    let audio = FakeAudioHardware(volume: 10)
-    audio.uid = nil
-    audio.deviceName = "USB DAC"
     let engine = try makeEngine(audio: audio, config: try VolumeLimiterConfig(limit: 50))
 
     let status = try engine.setLimit(65)
 
-    try expectEqual(status.limit, 65)
-    try expectEqual(status.deviceLimits["name:USB DAC"]?.limit, 65)
+    try expectEqual(status.defaultLimit, 65)
+    try expectTrue(status.deviceLimits.isEmpty, "setLimit does not create a per-device override")
 }
 
-private func testSetDefaultLimitKeepsDeviceOverride() throws {
+private func testSetDeviceLimitClampsImmediately() throws {
+    let audio = FakeAudioHardware(volume: 90)
+    audio.uid = "uid-x"
+    let engine = try makeEngine(audio: audio, config: try VolumeLimiterConfig(limit: 80))
+
+    _ = try engine.setDeviceLimit(uid: "uid-x", name: "X", limit: 45)
+
+    try expectEqual(audio.volume, 45)
+    try expectEqual(engine.status().deviceLimits["uid-x"]?.limit, 45)
+}
+
+private func testDeviceOverrideBeatsDefault() throws {
     let audio = FakeAudioHardware(volume: 10)
     audio.uid = "uid-x"
     let engine = try makeEngine(audio: audio, config: try VolumeLimiterConfig(limit: 50))
     try engine.start()
-    _ = try engine.setLimit(40)
+    _ = try engine.setDeviceLimit(uid: "uid-x", name: "Headphones", limit: 40)
 
-    let status = try engine.setDefaultLimit(70)
+    let status = try engine.setLimit(70)
 
     try expectEqual(status.defaultLimit, 70)
     try expectEqual(status.limit, 40)
@@ -482,13 +479,13 @@ private func testSetDefaultLimitKeepsDeviceOverride() throws {
     try expectEqual(audio.volume, 40)
 }
 
-private func testResetCurrentDeviceLimitFallsBackToDefault() throws {
+private func testRemoveDeviceLimitFallsBackToDefault() throws {
     let audio = FakeAudioHardware(volume: 10)
     audio.uid = "uid-x"
     let engine = try makeEngine(audio: audio, config: try VolumeLimiterConfig(limit: 55))
-    _ = try engine.setLimit(40)
+    _ = try engine.setDeviceLimit(uid: "uid-x", name: "Headphones", limit: 40)
 
-    let status = try engine.resetCurrentDeviceLimit()
+    let status = try engine.removeDeviceLimit(uid: "uid-x")
 
     try expectTrue(!status.deviceHasLimitOverride, "override cleared")
     try expectEqual(status.limit, 55)
@@ -547,31 +544,36 @@ private func testConfigResolvedLimit() throws {
     try expectEqual(config.resolvedLimit(forKey: "uid-z", name: "Z"), 50)
 }
 
-private func testCLIDefaultSendsSetDefaultLimit() throws {
-    let client = FakeCLIClient(responses: [IPCResponse(ok: true, id: "fixed-id", defaultLimit: 70)])
+private func testCLIDeviceSetSendsSetDeviceLimit() throws {
+    let client = FakeCLIClient(responses: [
+        IPCResponse(
+            ok: true,
+            id: "fixed-id",
+            defaultLimit: 50,
+            deviceLimits: [DeviceLimitEntry(uid: "uid-a", name: "Headphones", limit: 60)]
+        )
+    ])
     let runner = VolumeLimitCommandRunner(client: client, requestID: { "fixed-id" })
 
-    let output = runner.run(arguments: ["default", "70"])
+    let output = runner.run(arguments: ["device", "set", "uid-a", "60"])
 
     try expectEqual(output.exitCode, 0)
-    try expectEqual(output.stdout, "Default limit set to 70%.\n")
+    try expectEqual(output.stdout, "Limit for Headphones set to 60%.\n")
     try expectEqual(client.requests, [
-        IPCRequest(id: "fixed-id", cmd: IPCCommand.setDefaultLimit.rawValue, value: 70)
+        IPCRequest(id: "fixed-id", cmd: IPCCommand.setDeviceLimit.rawValue, value: 60, deviceUID: "uid-a")
     ])
 }
 
-private func testCLIResetSendsResetDeviceLimit() throws {
-    let client = FakeCLIClient(responses: [
-        IPCResponse(ok: true, id: "fixed-id", limit: 50, deviceName: "Speakers")
-    ])
+private func testCLIDeviceRemoveSendsRemoveDeviceLimit() throws {
+    let client = FakeCLIClient(responses: [IPCResponse(ok: true, id: "fixed-id", defaultLimit: 50)])
     let runner = VolumeLimitCommandRunner(client: client, requestID: { "fixed-id" })
 
-    let output = runner.run(arguments: ["reset"])
+    let output = runner.run(arguments: ["device", "remove", "uid-a"])
 
     try expectEqual(output.exitCode, 0)
-    try expectEqual(output.stdout, "Speakers now uses the default limit (50%).\n")
+    try expectEqual(output.stdout, "Removed per-device limit for uid-a.\n")
     try expectEqual(client.requests, [
-        IPCRequest(id: "fixed-id", cmd: IPCCommand.resetDeviceLimit.rawValue)
+        IPCRequest(id: "fixed-id", cmd: IPCCommand.removeDeviceLimit.rawValue, deviceUID: "uid-a")
     ])
 }
 
@@ -616,6 +618,7 @@ private final class FakeAudioHardware: AudioHardwareControlling {
     var volumeControlAvailable: Bool
     var deviceName: String = "Fake Speakers"
     var uid: String? = "uid-fake-speakers"
+    var deviceList: [OutputDeviceRef]?
     var setVolumeCalls: [Int] = []
     private var volumeChanged: ((AudioDeviceIdentifier) -> Void)?
     private var defaultDeviceChanged: ((AudioDeviceIdentifier) -> Void)?
@@ -639,6 +642,10 @@ private final class FakeAudioHardware: AudioHardwareControlling {
             volumeControlAvailable: volumeControlAvailable,
             isHeadphoneOutput: isHeadphoneOutput
         )
+    }
+
+    func outputDeviceList() throws -> [OutputDeviceRef] {
+        deviceList ?? [OutputDeviceRef(uid: uid ?? "uid-fake", name: deviceName, isHeadphoneOutput: isHeadphoneOutput)]
     }
 
     func setOutputVolume(deviceID: AudioDeviceIdentifier, percent: Int) throws {
@@ -714,7 +721,8 @@ private func fakeStatusResponse(id: String, limit: Int) -> IPCResponse {
         notifyOnLimit: false,
         deviceIsHeadphone: false,
         volumeControlAvailable: true,
-        diagnostics: []
+        diagnostics: [],
+        defaultLimit: limit
     )
 }
 

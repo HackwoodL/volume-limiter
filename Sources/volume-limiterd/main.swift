@@ -80,16 +80,25 @@ private func handle(request: IPCRequest, engine: VolumeLimiterEngine) -> IPCResp
                 return invalidArgumentResponse(id: request.id, message: "value must be an integer in 0...100")
             }
             return response(id: request.id, status: try engine.setLimit(value))
-        case .setDefaultLimit:
+        case .setDeviceLimit:
+            guard let uid = request.deviceUID else {
+                return missingArgumentResponse(id: request.id, argument: "deviceUID")
+            }
             guard let value = request.value else {
                 return missingArgumentResponse(id: request.id, argument: "value")
             }
             guard (0...100).contains(value) else {
                 return invalidArgumentResponse(id: request.id, message: "value must be an integer in 0...100")
             }
-            return response(id: request.id, status: try engine.setDefaultLimit(value))
-        case .resetDeviceLimit:
-            return response(id: request.id, status: try engine.resetCurrentDeviceLimit())
+            return response(
+                id: request.id,
+                status: try engine.setDeviceLimit(uid: uid, name: request.deviceName, limit: value)
+            )
+        case .removeDeviceLimit:
+            guard let uid = request.deviceUID else {
+                return missingArgumentResponse(id: request.id, argument: "deviceUID")
+            }
+            return response(id: request.id, status: try engine.removeDeviceLimit(uid: uid))
         case .setEnabled:
             guard let enabled = request.enabled else {
                 return missingArgumentResponse(id: request.id, argument: "enabled")
@@ -129,7 +138,10 @@ private func response(id: String, status: VolumeLimiterStatus) -> IPCResponse {
         deviceHasLimitOverride: status.deviceHasLimitOverride,
         deviceLimits: status.deviceLimits
             .map { DeviceLimitEntry(uid: $0.key, name: $0.value.name, limit: $0.value.limit) }
-            .sorted { ($0.name ?? $0.uid).localizedCaseInsensitiveCompare($1.name ?? $1.uid) == .orderedAscending }
+            .sorted { ($0.name ?? $0.uid).localizedCaseInsensitiveCompare($1.name ?? $1.uid) == .orderedAscending },
+        connectedDevices: status.connectedDevices
+            .map { DeviceEntry(uid: $0.uid, name: $0.name) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     )
 }
 

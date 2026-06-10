@@ -12,8 +12,8 @@ public enum IPCCommand: String, Codable, Equatable {
     case ping
     case getStatus
     case setLimit
-    case setDefaultLimit
-    case resetDeviceLimit
+    case setDeviceLimit
+    case removeDeviceLimit
     case setEnabled
     case setHeadphoneOnly
     case setNotifyOnLimit
@@ -25,19 +25,25 @@ public struct IPCRequest: Codable, Equatable {
     public var cmd: String
     public var value: Int?
     public var enabled: Bool?
+    public var deviceUID: String?
+    public var deviceName: String?
 
     public init(
         version: Int = VolumeLimiterIPC.version,
         id: String,
         cmd: String,
         value: Int? = nil,
-        enabled: Bool? = nil
+        enabled: Bool? = nil,
+        deviceUID: String? = nil,
+        deviceName: String? = nil
     ) {
         self.version = version
         self.id = id
         self.cmd = cmd
         self.value = value
         self.enabled = enabled
+        self.deviceUID = deviceUID
+        self.deviceName = deviceName
     }
 
     public var command: IPCCommand? {
@@ -68,6 +74,17 @@ public struct DeviceLimitEntry: Codable, Equatable {
     }
 }
 
+/// A connected output device that can have a per-device cap added.
+public struct DeviceEntry: Codable, Equatable {
+    public var uid: String
+    public var name: String
+
+    public init(uid: String, name: String) {
+        self.uid = uid
+        self.name = name
+    }
+}
+
 public struct IPCResponse: Codable, Equatable {
     public var ok: Bool
     public var id: String
@@ -85,6 +102,7 @@ public struct IPCResponse: Codable, Equatable {
     public var defaultLimit: Int?
     public var deviceHasLimitOverride: Bool?
     public var deviceLimits: [DeviceLimitEntry]?
+    public var connectedDevices: [DeviceEntry]?
 
     public init(
         ok: Bool,
@@ -102,7 +120,8 @@ public struct IPCResponse: Codable, Equatable {
         deviceUID: String? = nil,
         defaultLimit: Int? = nil,
         deviceHasLimitOverride: Bool? = nil,
-        deviceLimits: [DeviceLimitEntry]? = nil
+        deviceLimits: [DeviceLimitEntry]? = nil,
+        connectedDevices: [DeviceEntry]? = nil
     ) {
         self.ok = ok
         self.id = id
@@ -120,6 +139,7 @@ public struct IPCResponse: Codable, Equatable {
         self.defaultLimit = defaultLimit
         self.deviceHasLimitOverride = deviceHasLimitOverride
         self.deviceLimits = deviceLimits
+        self.connectedDevices = connectedDevices
     }
 
     public static func success(id: String) -> IPCResponse {

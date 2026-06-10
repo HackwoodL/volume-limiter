@@ -1,10 +1,11 @@
 "app.title" = "Volume Limiter";
 "app.subtitle" = "Caps the current macOS output volume through the shared volume-limiterd daemon.";
 "section.options" = "Options";
-"limit.title" = "Limit";
-"limit.scope.override" = "This device only · default %d%%";
-"limit.scope.default" = "Default cap, shared by other devices";
-"reset.button" = "Use default";
+"limit.title" = "Default cap";
+"device.section" = "Per-device caps";
+"device.add" = "Add a device…";
+"device.remove" = "Remove";
+"device.empty" = "No per-device caps. The default applies to every device.";
 "currentVolume.title" = "Current volume";
 "device.title" = "Device";
 "percent.value" = "%d%%";

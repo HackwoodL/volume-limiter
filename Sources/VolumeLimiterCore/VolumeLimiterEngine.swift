@@ -14,6 +14,7 @@ public struct VolumeLimiterStatus: Codable, Equatable {
     public var volumeControlAvailable: Bool
     public var diagnostics: [AudioDiagnostic]
     public var deviceLimits: [String: DeviceLimit]
+    public var connectedDevices: [OutputDeviceRef]
 
     public init(
         enabled: Bool,
@@ -28,7 +29,8 @@ public struct VolumeLimiterStatus: Codable, Equatable {
         deviceIsHeadphone: Bool,
         volumeControlAvailable: Bool,
         diagnostics: [AudioDiagnostic],
-        deviceLimits: [String: DeviceLimit] = [:]
+        deviceLimits: [String: DeviceLimit] = [:],
+        connectedDevices: [OutputDeviceRef] = []
     ) {
         self.enabled = enabled
         self.limit = limit
@@ -43,6 +45,7 @@ public struct VolumeLimiterStatus: Codable, Equatable {
         self.volumeControlAvailable = volumeControlAvailable
         self.diagnostics = diagnostics
         self.deviceLimits = deviceLimits
+        self.connectedDevices = connectedDevices
     }
 }
 
@@ -98,42 +101,38 @@ public final class VolumeLimiterEngine {
         audio.stopMonitoring()
     }
 
+    /// Sets the default cap applied to every device without a per-device override.
     @discardableResult
     public func setLimit(_ value: Int) throws -> VolumeLimiterStatus {
         lock.lock()
         defer { lock.unlock() }
-        let validated = try VolumeLimiterConfig.validatedLimit(value)
-        if let snapshot = currentSnapshotLocked(), let key = deviceKey(for: snapshot) {
-            config.deviceLimits[key] = DeviceLimit(limit: validated, name: snapshot.name)
-        } else {
-            config.limit = validated
-        }
+        config.limit = try VolumeLimiterConfig.validatedLimit(value)
         try configStore.save(config)
         try enforceLimitLocked(reason: "setLimit")
         return statusLocked()
     }
 
-    /// Sets the default cap applied to devices without a per-device override.
+    /// Adds or updates a per-device cap override, keyed by the device's stable UID.
     @discardableResult
-    public func setDefaultLimit(_ value: Int) throws -> VolumeLimiterStatus {
+    public func setDeviceLimit(uid: String, name: String?, limit value: Int) throws -> VolumeLimiterStatus {
         lock.lock()
         defer { lock.unlock() }
-        config.limit = try VolumeLimiterConfig.validatedLimit(value)
+        let validated = try VolumeLimiterConfig.validatedLimit(value)
+        let resolvedName = name ?? config.deviceLimits[uid]?.name ?? connectedDeviceName(forUID: uid)
+        config.deviceLimits[uid] = DeviceLimit(limit: validated, name: resolvedName)
         try configStore.save(config)
-        try enforceLimitLocked(reason: "setDefaultLimit")
+        try enforceLimitLocked(reason: "setDeviceLimit")
         return statusLocked()
     }
 
-    /// Removes the current device's per-device override, falling back to the default cap.
+    /// Removes a per-device override so the device falls back to the default cap.
     @discardableResult
-    public func resetCurrentDeviceLimit() throws -> VolumeLimiterStatus {
+    public func removeDeviceLimit(uid: String) throws -> VolumeLimiterStatus {
         lock.lock()
         defer { lock.unlock() }
-        if let snapshot = currentSnapshotLocked(),
-           let key = config.deviceLimitKey(forKey: deviceKey(for: snapshot), name: snapshot.name) {
-            config.deviceLimits.removeValue(forKey: key)
+        if config.deviceLimits.removeValue(forKey: uid) != nil {
             try configStore.save(config)
-            try enforceLimitLocked(reason: "resetDeviceLimit")
+            try enforceLimitLocked(reason: "removeDeviceLimit")
         }
         return statusLocked()
     }
@@ -241,12 +240,8 @@ public final class VolumeLimiterEngine {
         }
     }
 
-    private func currentSnapshotLocked() -> OutputDeviceSnapshot? {
-        guard let deviceID = try? audio.defaultOutputDevice(),
-              let snapshot = try? audio.outputDeviceSnapshot(for: deviceID) else {
-            return nil
-        }
-        return snapshot
+    private func connectedDeviceName(forUID uid: String) -> String? {
+        (try? audio.outputDeviceList())?.first(where: { $0.uid == uid })?.name
     }
 
     private func deviceKey(for snapshot: OutputDeviceSnapshot) -> String? {
@@ -257,6 +252,7 @@ public final class VolumeLimiterEngine {
     }
 
     private func statusLocked() -> VolumeLimiterStatus {
+        let connectedDevices = (try? audio.outputDeviceList()) ?? []
         do {
             let deviceID = try audio.defaultOutputDevice()
             let snapshot = try audio.outputDeviceSnapshot(for: deviceID)
@@ -274,7 +270,8 @@ public final class VolumeLimiterEngine {
                 deviceIsHeadphone: snapshot.isHeadphoneOutput,
                 volumeControlAvailable: snapshot.volumeControlAvailable,
                 diagnostics: snapshot.diagnostics + runtimeDiagnostics,
-                deviceLimits: config.deviceLimits
+                deviceLimits: config.deviceLimits,
+                connectedDevices: connectedDevices
             )
         } catch {
             return VolumeLimiterStatus(
@@ -295,7 +292,8 @@ public final class VolumeLimiterEngine {
                         message: error.localizedDescription
                     )
                 ],
-                deviceLimits: config.deviceLimits
+                deviceLimits: config.deviceLimits,
+                connectedDevices: connectedDevices
             )
         }
     }

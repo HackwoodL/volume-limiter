@@ -69,6 +69,63 @@ public final class CoreAudioHardware: AudioHardwareControlling {
         )
     }
 
+    public func outputDeviceList() throws -> [OutputDeviceRef] {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDevices,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let systemObject = AudioObjectID(kAudioObjectSystemObject)
+
+        var dataSize = UInt32(0)
+        let sizeStatus = AudioObjectGetPropertyDataSize(systemObject, &address, 0, nil, &dataSize)
+        guard sizeStatus == noErr else {
+            throw audioError(operation: "List audio devices", status: sizeStatus)
+        }
+
+        let count = Int(dataSize) / MemoryLayout<AudioDeviceID>.size
+        guard count > 0 else {
+            return []
+        }
+        var deviceIDs = [AudioDeviceID](repeating: 0, count: count)
+        let dataStatus = AudioObjectGetPropertyData(systemObject, &address, 0, nil, &dataSize, &deviceIDs)
+        guard dataStatus == noErr else {
+            throw audioError(operation: "List audio devices", status: dataStatus)
+        }
+
+        var refs: [OutputDeviceRef] = []
+        for deviceID in deviceIDs where hasOutputStreams(deviceID: deviceID) {
+            guard let uid = deviceUID(deviceID: deviceID) else {
+                continue
+            }
+            let name = deviceName(deviceID: deviceID)
+            refs.append(
+                OutputDeviceRef(
+                    uid: uid,
+                    name: name,
+                    isHeadphoneOutput: isHeadphoneOutput(name: name, transport: transportType(deviceID: deviceID))
+                )
+            )
+        }
+        return refs
+    }
+
+    private func hasOutputStreams(deviceID: AudioDeviceIdentifier) -> Bool {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyStreams,
+            mScope: kAudioObjectPropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        guard AudioObjectHasProperty(deviceID, &address) else {
+            return false
+        }
+        var size = UInt32(0)
+        guard AudioObjectGetPropertyDataSize(deviceID, &address, 0, nil, &size) == noErr else {
+            return false
+        }
+        return size > 0
+    }
+
     public func setOutputVolume(deviceID: AudioDeviceIdentifier, percent: Int) throws {
         let scalar = Float32(Double(try VolumeLimiterConfig.validatedLimit(percent)) / 100.0)
         let mainAddress = volumeAddress(element: kAudioObjectPropertyElementMain)
@@ -413,6 +470,10 @@ public final class CoreAudioHardware: AudioHardwareControlling {
     }
 
     public func outputDeviceSnapshot(for deviceID: AudioDeviceIdentifier) throws -> OutputDeviceSnapshot {
+        throw AudioHardwareError(operation: "Core Audio", message: "Core Audio is only available on macOS.")
+    }
+
+    public func outputDeviceList() throws -> [OutputDeviceRef] {
         throw AudioHardwareError(operation: "Core Audio", message: "Core Audio is only available on macOS.")
     }
 

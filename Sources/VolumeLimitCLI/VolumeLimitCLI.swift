@@ -44,10 +44,6 @@ public struct VolumeLimitCommandRunner {
             switch first {
             case "set":
                 return try handleSet(arguments: arguments)
-            case "default":
-                return try handleSetDefault(arguments: arguments)
-            case "reset":
-                return try handleReset(arguments: arguments)
             case "device":
                 return try handleDevice(arguments: arguments)
             case "get":
@@ -79,51 +75,76 @@ public struct VolumeLimitCommandRunner {
         }
 
         let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.setLimit.rawValue, value: value))
-        let device = response.deviceName ?? "the current device"
-        let limit = try required(response.limit, field: "limit")
-        return CommandOutput(stdout: "Limit for \(device) set to \(limit)%.\n")
-    }
-
-    private func handleSetDefault(arguments: [String]) throws -> CommandOutput {
-        guard arguments.count == 2 else {
-            throw CLIError.usage("Expected: default <0-100>")
-        }
-        guard let value = Int(arguments[1]), (0...100).contains(value) else {
-            throw CLIError.usage("Volume limit must be an integer in 0...100.")
-        }
-
-        let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.setDefaultLimit.rawValue, value: value))
         let limit = try required(response.defaultLimit, field: "defaultLimit")
         return CommandOutput(stdout: "Default limit set to \(limit)%.\n")
     }
 
-    private func handleReset(arguments: [String]) throws -> CommandOutput {
-        guard arguments.count == 1 else {
-            throw CLIError.usage("Expected: reset")
+    private func handleDevice(arguments: [String]) throws -> CommandOutput {
+        guard arguments.count >= 2 else {
+            throw CLIError.usage("Expected: device <list|set|remove> ...")
         }
 
-        let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.resetDeviceLimit.rawValue))
-        let device = response.deviceName ?? "the current device"
-        let limit = try required(response.limit, field: "limit")
-        return CommandOutput(stdout: "\(device) now uses the default limit (\(limit)%).\n")
+        switch arguments[1] {
+        case "list":
+            guard arguments.count == 2 else {
+                throw CLIError.usage("Expected: device list")
+            }
+            return try deviceListOutput()
+        case "set":
+            guard arguments.count == 4 else {
+                throw CLIError.usage("Expected: device set <uid> <0-100>")
+            }
+            guard let value = Int(arguments[3]), (0...100).contains(value) else {
+                throw CLIError.usage("Volume limit must be an integer in 0...100.")
+            }
+            let uid = arguments[2]
+            let response = try send(
+                IPCRequest(
+                    id: requestID(),
+                    cmd: IPCCommand.setDeviceLimit.rawValue,
+                    value: value,
+                    deviceUID: uid
+                )
+            )
+            let name = (response.deviceLimits ?? []).first { $0.uid == uid }?.name ?? uid
+            return CommandOutput(stdout: "Limit for \(name) set to \(value)%.\n")
+        case "remove":
+            guard arguments.count == 3 else {
+                throw CLIError.usage("Expected: device remove <uid>")
+            }
+            let uid = arguments[2]
+            _ = try send(
+                IPCRequest(
+                    id: requestID(),
+                    cmd: IPCCommand.removeDeviceLimit.rawValue,
+                    deviceUID: uid
+                )
+            )
+            return CommandOutput(stdout: "Removed per-device limit for \(uid).\n")
+        default:
+            throw CLIError.usage("Expected: device <list|set|remove> ...")
+        }
     }
 
-    private func handleDevice(arguments: [String]) throws -> CommandOutput {
-        guard arguments.count == 2, arguments[1] == "list" else {
-            throw CLIError.usage("Expected: device list")
-        }
-
+    private func deviceListOutput() throws -> CommandOutput {
         let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.getStatus.rawValue))
         let defaultLimit = try required(response.defaultLimit, field: "defaultLimit")
-        let entries = response.deviceLimits ?? []
+        let overrides = response.deviceLimits ?? []
+        let connected = response.connectedDevices ?? []
 
         var lines = ["Default limit: \(defaultLimit)%"]
-        if entries.isEmpty {
-            lines.append("No per-device limits configured.")
+        if overrides.isEmpty {
+            lines.append("Per-device limits: none")
         } else {
             lines.append("Per-device limits:")
-            for entry in entries {
+            for entry in overrides {
                 lines.append("  - \(entry.name ?? entry.uid): \(entry.limit)%  [\(entry.uid)]")
+            }
+        }
+        if !connected.isEmpty {
+            lines.append("Connected devices:")
+            for device in connected {
+                lines.append("  - \(device.name)  [\(device.uid)]")
             }
         }
         return CommandOutput(stdout: lines.joined(separator: "\n").appending("\n"))
@@ -304,10 +325,10 @@ private func fullStatusText(_ response: IPCResponse) throws -> String {
 private func helpText(executableName: String) -> String {
     """
     Usage:
-      \(executableName) set <0-100>          Cap the device you're currently using
-      \(executableName) reset                Make the current device use the default cap
-      \(executableName) default <0-100>      Set the default cap for other devices
-      \(executableName) device list          List per-device caps
+      \(executableName) set <0-100>            Set the default cap for all devices
+      \(executableName) device list            List per-device caps and connected devices
+      \(executableName) device set <uid> <n>   Cap a specific device by UID
+      \(executableName) device remove <uid>    Remove a device's per-device cap
       \(executableName) get
       \(executableName) on
       \(executableName) off
@@ -318,8 +339,7 @@ private func helpText(executableName: String) -> String {
       \(executableName) --help
 
     volume-limit is a thin client; volume-limiterd owns Core Audio and configuration.
-    Each output device remembers its own cap; "default" applies to devices you
-    haven't set explicitly.
+    "set" is the default cap; per-device caps override it for specific devices.
     """
 }
 

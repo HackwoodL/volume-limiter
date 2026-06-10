@@ -15,7 +15,7 @@ Volume Limiter is a lightweight macOS maximum-volume limiter. A single per-user 
 - The prefPane auto-refreshes while visible and stops refreshing when you leave it.
 - Shared config owned by the daemon.
 - Optional headphone-only mode for Bluetooth, USB, Type-C, and other headphone-like outputs.
-- Per-device limits: each output device remembers its own cap, with a global default for the rest.
+- Per-device caps: a default cap applies to every device, with optional overrides for specific devices.
 - Optional macOS notification when volume is capped.
 - No kernel extension, no virtual audio driver, no Developer ID, no notarization.
 
@@ -46,10 +46,10 @@ scripts/install-prefpane.sh
 ## CLI
 
 ```bash
-volume-limit set <0-100>        # cap the device you're currently using
-volume-limit reset              # current device falls back to the default cap
-volume-limit default <0-100>    # set the default cap for other devices
-volume-limit device list        # list per-device caps
+volume-limit set <0-100>            # set the default cap for all devices
+volume-limit device set <uid> <n>   # cap a specific device by UID
+volume-limit device remove <uid>    # remove a device's per-device cap
+volume-limit device list            # list per-device caps and connected devices
 volume-limit get
 volume-limit on
 volume-limit off

@@ -16,8 +16,6 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
 
     private let limitTitleLabel = NSTextField(labelWithString: localized("limit.title"))
     private let limitValueLabel = NSTextField(labelWithString: localized("percent.placeholder"))
-    private let limitScopeLabel = NSTextField(labelWithString: "")
-    private let resetDefaultButton = NSButton(title: localized("reset.button"), target: nil, action: nil)
     private let currentVolumeTitleLabel = NSTextField(labelWithString: localized("currentVolume.title"))
     private let currentVolumeValueLabel = NSTextField(labelWithString: localized("value.unavailable"))
     private let deviceTitleLabel = NSTextField(labelWithString: localized("device.title"))
@@ -25,8 +23,17 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     private let warningTitleLabel = NSTextField(labelWithString: "")
     private let warningDetailLabel = NSTextField(labelWithString: "")
 
+    private let addDevicePopup = NSPopUpButton(frame: .zero, pullsDown: true)
+    private let emptyDeviceLabel = NSTextField(labelWithString: localized("device.empty"))
+    private var deviceRows: [String: PerDeviceRow] = [:]
+    private var deviceStack: NSStackView?
+    private var lastAvailableDeviceUIDs: [String] = []
+    private var currentDefaultLimit = 50
+
     private var warningCard: NSView?
     private var limitCard: NSView?
+    private var deviceSection: NSView?
+    private var deviceCard: NSView?
     private var optionsSection: NSView?
     private var optionsCard: NSView?
 
@@ -38,11 +45,15 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         let header = makeHeaderCard()
         let warning = makeWarningCard()
         let limit = makeLimitCard()
+        let devices = makeDeviceCard()
+        let deviceHeading = sectionLabel(localized("device.section"))
         let options = makeOptionsCard()
         let optionsHeading = sectionLabel(localized("section.options"))
 
         warningCard = warning
         limitCard = limit
+        deviceSection = deviceHeading
+        deviceCard = devices
         optionsSection = optionsHeading
         optionsCard = options
         warning.isHidden = true
@@ -51,6 +62,8 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             header,
             warning,
             limit,
+            deviceHeading,
+            devices,
             optionsHeading,
             options
         ])
@@ -58,6 +71,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         outerStack.alignment = .leading
         outerStack.spacing = 14
         outerStack.translatesAutoresizingMaskIntoConstraints = false
+        outerStack.setCustomSpacing(6, after: deviceHeading)
         outerStack.setCustomSpacing(6, after: optionsHeading)
 
         rootView.addSubview(outerStack)
@@ -69,6 +83,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             header.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
             warning.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
             limit.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
+            devices.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
             options.widthAnchor.constraint(equalTo: outerStack.widthAnchor)
         ])
 
@@ -176,9 +191,61 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         }
     }
 
-    @objc private func resetLimitButtonPressed(_: NSButton) {
+    @objc private func deviceSliderChanged(_ sender: NSSlider) {
+        guard !isUpdatingControls else {
+            return
+        }
+        guard let row = deviceRows.values.first(where: { $0.slider === sender }) else {
+            return
+        }
+        let value = Int(sender.doubleValue.rounded())
+        row.valueLabel.stringValue = localizedFormat("percent.value", value)
         do {
-            let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.resetDeviceLimit.rawValue))
+            let response = try send(
+                IPCRequest(
+                    id: requestID(),
+                    cmd: IPCCommand.setDeviceLimit.rawValue,
+                    value: value,
+                    deviceUID: row.uid,
+                    deviceName: row.name
+                )
+            )
+            apply(response)
+        } catch {
+            showDaemonError(error)
+            refreshStatus()
+        }
+    }
+
+    @objc private func deviceRemovePressed(_ sender: NSButton) {
+        guard let row = deviceRows.values.first(where: { $0.removeButton === sender }) else {
+            return
+        }
+        do {
+            let response = try send(
+                IPCRequest(id: requestID(), cmd: IPCCommand.removeDeviceLimit.rawValue, deviceUID: row.uid)
+            )
+            apply(response)
+        } catch {
+            showDaemonError(error)
+            refreshStatus()
+        }
+    }
+
+    @objc private func addDeviceItemSelected(_ sender: NSMenuItem) {
+        guard let uid = sender.representedObject as? String else {
+            return
+        }
+        do {
+            let response = try send(
+                IPCRequest(
+                    id: requestID(),
+                    cmd: IPCCommand.setDeviceLimit.rawValue,
+                    value: currentDefaultLimit,
+                    deviceUID: uid,
+                    deviceName: sender.title
+                )
+            )
             apply(response)
         } catch {
             showDaemonError(error)
@@ -236,16 +303,10 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         isUpdatingControls = true
         defer { isUpdatingControls = false }
 
-        let limit = response.limit ?? Int(limitSlider.doubleValue.rounded())
-        limitSlider.integerValue = limit
-        limitValueLabel.stringValue = localizedFormat("percent.value", limit)
-
-        let hasOverride = response.deviceHasLimitOverride ?? false
-        let defaultLimit = response.defaultLimit ?? limit
-        limitScopeLabel.stringValue = hasOverride
-            ? localizedFormat("limit.scope.override", defaultLimit)
-            : localized("limit.scope.default")
-        resetDefaultButton.isHidden = !hasOverride
+        let defaultLimit = response.defaultLimit ?? response.limit ?? Int(limitSlider.doubleValue.rounded())
+        currentDefaultLimit = defaultLimit
+        limitSlider.integerValue = defaultLimit
+        limitValueLabel.stringValue = localizedFormat("percent.value", defaultLimit)
 
         if let currentVolume = response.currentVolume {
             currentVolumeValueLabel.stringValue = localizedFormat("percent.value", currentVolume)
@@ -256,6 +317,8 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         deviceValueLabel.stringValue = response.deviceName ?? localized("value.unavailable")
         headphoneOnlySwitch.state = (response.headphoneOnly ?? false) ? .on : .off
         notifyOnLimitSwitch.state = (response.notifyOnLimit ?? false) ? .on : .off
+
+        updateDeviceCard(overrides: response.deviceLimits ?? [], connected: response.connectedDevices ?? [])
 
         let limiterEnabled = response.enabled ?? false
         masterSwitch.state = limiterEnabled ? .on : .off
@@ -291,6 +354,8 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
 
         let showControls = daemonAvailable && limiterEnabled
         setHidden(limitCard, !showControls)
+        setHidden(deviceSection, !showControls)
+        setHidden(deviceCard, !showControls)
         setHidden(optionsSection, !showControls)
         setHidden(optionsCard, !showControls)
 
@@ -352,17 +417,6 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             label.setContentHuggingPriority(.required, for: .horizontal)
             label.widthAnchor.constraint(greaterThanOrEqualToConstant: 48).isActive = true
         }
-
-        limitScopeLabel.font = .systemFont(ofSize: 11)
-        limitScopeLabel.textColor = .secondaryLabelColor
-        limitScopeLabel.lineBreakMode = .byTruncatingTail
-
-        resetDefaultButton.target = self
-        resetDefaultButton.action = #selector(resetLimitButtonPressed(_:))
-        resetDefaultButton.bezelStyle = .rounded
-        resetDefaultButton.controlSize = .small
-        resetDefaultButton.isHidden = true
-        resetDefaultButton.setContentHuggingPriority(.required, for: .horizontal)
 
         warningTitleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
         warningTitleLabel.lineBreakMode = .byWordWrapping
@@ -426,32 +480,163 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     }
 
     private func makeLimitCard() -> CardView {
-        let topRow = NSStackView(views: [limitTitleLabel, limitSlider, limitValueLabel])
-        topRow.orientation = .horizontal
-        topRow.alignment = .centerY
-        topRow.distribution = .fill
-        topRow.spacing = 12
-        topRow.heightAnchor.constraint(greaterThanOrEqualToConstant: 38).isActive = true
-
-        let scopeRow = NSStackView(views: [limitScopeLabel, flexibleSpacer(), resetDefaultButton])
-        scopeRow.orientation = .horizontal
-        scopeRow.alignment = .centerY
-        scopeRow.spacing = 8
-        scopeRow.heightAnchor.constraint(greaterThanOrEqualToConstant: 22).isActive = true
-
-        let limitCell = NSStackView(views: [topRow, scopeRow])
-        limitCell.orientation = .vertical
-        limitCell.alignment = .leading
-        limitCell.spacing = 2
-        limitCell.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            topRow.widthAnchor.constraint(equalTo: limitCell.widthAnchor),
-            scopeRow.widthAnchor.constraint(equalTo: limitCell.widthAnchor)
-        ])
-
+        let limitRowView = makeRow([limitTitleLabel, limitSlider, limitValueLabel])
         let volumeRowView = makeRow([currentVolumeTitleLabel, flexibleSpacer(), currentVolumeValueLabel])
         let deviceRowView = makeRow([deviceTitleLabel, flexibleSpacer(), deviceValueLabel])
-        return makeCard(rows: [limitCell, volumeRowView, deviceRowView])
+        return makeCard(rows: [limitRowView, volumeRowView, deviceRowView])
+    }
+
+    private func makeDeviceCard() -> CardView {
+        emptyDeviceLabel.font = .systemFont(ofSize: 12)
+        emptyDeviceLabel.textColor = .secondaryLabelColor
+
+        addDevicePopup.target = nil
+        addDevicePopup.controlSize = .small
+        addDevicePopup.translatesAutoresizingMaskIntoConstraints = false
+
+        let addRow = NSStackView(views: [addDevicePopup, flexibleSpacer()])
+        addRow.orientation = .horizontal
+        addRow.alignment = .centerY
+        addRow.spacing = 8
+        addRow.heightAnchor.constraint(greaterThanOrEqualToConstant: 36).isActive = true
+
+        let emptyRow = NSStackView(views: [emptyDeviceLabel, flexibleSpacer()])
+        emptyRow.orientation = .horizontal
+        emptyRow.alignment = .centerY
+        emptyRow.heightAnchor.constraint(greaterThanOrEqualToConstant: 28).isActive = true
+
+        let stack = NSStackView(views: [emptyRow, addRow])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 4
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        deviceStack = stack
+
+        let card = CardView()
+        card.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
+            stack.topAnchor.constraint(equalTo: card.topAnchor, constant: 8),
+            stack.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -8),
+            emptyRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            addRow.widthAnchor.constraint(equalTo: stack.widthAnchor)
+        ])
+        return card
+    }
+
+    private func updateDeviceCard(overrides: [DeviceLimitEntry], connected: [DeviceEntry]) {
+        guard let stack = deviceStack else {
+            return
+        }
+        let overrideUIDs = Set(overrides.map { $0.uid })
+
+        for (uid, row) in deviceRows where !overrideUIDs.contains(uid) {
+            row.container.removeFromSuperview()
+            deviceRows[uid] = nil
+        }
+
+        for entry in overrides {
+            let name = entry.name ?? entry.uid
+            if let row = deviceRows[entry.uid] {
+                row.name = name
+                row.nameLabel.stringValue = name
+                if Int(row.slider.doubleValue.rounded()) != entry.limit {
+                    row.slider.integerValue = entry.limit
+                }
+                row.valueLabel.stringValue = localizedFormat("percent.value", entry.limit)
+            } else {
+                let row = makePerDeviceRow(uid: entry.uid, name: name, limit: entry.limit)
+                deviceRows[entry.uid] = row
+                let insertIndex = max(0, stack.arrangedSubviews.count - 1)
+                stack.insertArrangedSubview(row.container, at: insertIndex)
+                NSLayoutConstraint.activate([
+                    row.container.leadingAnchor.constraint(equalTo: stack.leadingAnchor),
+                    row.container.trailingAnchor.constraint(equalTo: stack.trailingAnchor)
+                ])
+            }
+        }
+
+        emptyDeviceLabel.superview?.isHidden = !overrides.isEmpty
+        updateAddPopup(connected.filter { !overrideUIDs.contains($0.uid) })
+    }
+
+    private func makePerDeviceRow(uid: String, name: String, limit: Int) -> PerDeviceRow {
+        let nameLabel = NSTextField(labelWithString: name)
+        nameLabel.font = .systemFont(ofSize: 13)
+        nameLabel.lineBreakMode = .byTruncatingTail
+        nameLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        nameLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 90).isActive = true
+
+        let slider = NSSlider(
+            value: Double(limit),
+            minValue: 0,
+            maxValue: 100,
+            target: self,
+            action: #selector(deviceSliderChanged(_:))
+        )
+        slider.controlSize = .small
+        slider.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        slider.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        slider.widthAnchor.constraint(greaterThanOrEqualToConstant: 110).isActive = true
+
+        let valueLabel = NSTextField(labelWithString: localizedFormat("percent.value", limit))
+        valueLabel.font = .systemFont(ofSize: 13)
+        valueLabel.alignment = .right
+        valueLabel.textColor = .secondaryLabelColor
+        valueLabel.setContentHuggingPriority(.required, for: .horizontal)
+        valueLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 44).isActive = true
+
+        let removeButton = NSButton(title: "", target: self, action: #selector(deviceRemovePressed(_:)))
+        removeButton.isBordered = false
+        removeButton.imagePosition = .imageOnly
+        if let image = NSImage(systemSymbolName: "minus.circle.fill", accessibilityDescription: localized("device.remove")) {
+            removeButton.image = image
+            removeButton.contentTintColor = .systemRed
+        } else {
+            removeButton.title = "–"
+            removeButton.isBordered = true
+        }
+        removeButton.setContentHuggingPriority(.required, for: .horizontal)
+
+        let container = NSStackView(views: [nameLabel, slider, valueLabel, removeButton])
+        container.orientation = .horizontal
+        container.alignment = .centerY
+        container.distribution = .fill
+        container.spacing = 10
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.heightAnchor.constraint(greaterThanOrEqualToConstant: 34).isActive = true
+
+        return PerDeviceRow(
+            uid: uid,
+            name: name,
+            container: container,
+            nameLabel: nameLabel,
+            slider: slider,
+            valueLabel: valueLabel,
+            removeButton: removeButton
+        )
+    }
+
+    private func updateAddPopup(_ devices: [DeviceEntry]) {
+        let uids = devices.map { $0.uid }
+        guard uids != lastAvailableDeviceUIDs else {
+            return
+        }
+        lastAvailableDeviceUIDs = uids
+
+        let menu = addDevicePopup.menu ?? NSMenu()
+        menu.removeAllItems()
+        menu.addItem(NSMenuItem(title: localized("device.add"), action: nil, keyEquivalent: ""))
+        for device in devices {
+            let item = NSMenuItem(title: device.name, action: #selector(addDeviceItemSelected(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = device.uid
+            menu.addItem(item)
+        }
+        addDevicePopup.menu = menu
+        addDevicePopup.isEnabled = !devices.isEmpty
     }
 
     private func makeOptionsCard() -> CardView {
@@ -590,6 +775,34 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         box.boxType = .separator
         box.translatesAutoresizingMaskIntoConstraints = false
         return box
+    }
+}
+
+private final class PerDeviceRow {
+    let uid: String
+    var name: String
+    let container: NSView
+    let nameLabel: NSTextField
+    let slider: NSSlider
+    let valueLabel: NSTextField
+    let removeButton: NSButton
+
+    init(
+        uid: String,
+        name: String,
+        container: NSView,
+        nameLabel: NSTextField,
+        slider: NSSlider,
+        valueLabel: NSTextField,
+        removeButton: NSButton
+    ) {
+        self.uid = uid
+        self.name = name
+        self.container = container
+        self.nameLabel = nameLabel
+        self.slider = slider
+        self.valueLabel = valueLabel
+        self.removeButton = removeButton
     }
 }
 

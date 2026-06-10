@@ -46,6 +46,20 @@ public struct OutputDeviceSnapshot: Codable, Equatable {
     }
 }
 
+/// A lightweight reference to a connected output device, used to populate
+/// the "add a device" picker without reading each device's volume.
+public struct OutputDeviceRef: Codable, Equatable {
+    public var uid: String
+    public var name: String
+    public var isHeadphoneOutput: Bool
+
+    public init(uid: String, name: String, isHeadphoneOutput: Bool = false) {
+        self.uid = uid
+        self.name = name
+        self.isHeadphoneOutput = isHeadphoneOutput
+    }
+}
+
 public struct AudioHardwareError: Error, Equatable, LocalizedError {
     public var operation: String
     public var status: OSStatus?
@@ -69,6 +83,7 @@ public struct AudioHardwareError: Error, Equatable, LocalizedError {
 public protocol AudioHardwareControlling: AnyObject {
     func defaultOutputDevice() throws -> AudioDeviceIdentifier
     func outputDeviceSnapshot(for deviceID: AudioDeviceIdentifier) throws -> OutputDeviceSnapshot
+    func outputDeviceList() throws -> [OutputDeviceRef]
     func setOutputVolume(deviceID: AudioDeviceIdentifier, percent: Int) throws
     func startMonitoring(
         defaultDeviceChanged: @escaping (AudioDeviceIdentifier) -> Void,
