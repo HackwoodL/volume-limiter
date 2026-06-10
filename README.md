@@ -4,7 +4,7 @@
 
 ![Volume Limiter prefPane in System Settings](docs/screenshots/prefpane-system-settings.png)
 
-Volume Limiter is a lightweight macOS app that caps your maximum output volume. Whenever the volume goes above the limit you set, it's immediately pushed back down. Control it from a pane in System Settings, or from a small command-line tool.
+Volume Limiter is a lightweight macOS app that caps your maximum output volume. I built it to stop a newly-connected headset from suddenly blasting audio and hurting your ears: it holds every output device to a maximum volume you choose, and pushes the volume back down the moment it goes above that limit. Control it from a pane in System Settings, or from a small command-line tool.
 
 ## Features
 
@@ -13,12 +13,10 @@ Volume Limiter is a lightweight macOS app that caps your maximum output volume. 
 - Headphone-only mode: only limit headphone-like outputs (Bluetooth, USB, Type-C).
 - Optional notification when the volume is capped.
 - A System Settings GUI and a `volume-limit` command line, always in sync.
-- Drag-to-install DMG and one-click uninstall.
-- No kernel extension and no audio driver; no paid Apple certificate needed.
 
 ## Install
 
-### Easiest: drag-to-install DMG (recommended)
+### Easiest: double-click install from a DMG (recommended)
 
 Open `VolumeLimiter-<version>.dmg`, then **double-click `VolumeLimiter.prefPane`**
 inside it. Click **Install** when System Settings asks. The background service
@@ -79,11 +77,6 @@ config, and pane:
 ```bash
 brew uninstall --cask HackwoodL/tap/volume-limiter-gui
 ```
-
-> A Homebrew install is managed by Homebrew, so uninstall it with `brew uninstall`
-> (one line, above) — not the in-pane **Uninstall** button, which is for the
-> DMG/source install. This brew-installed-means-brew-uninstalled rule is how every
-> Homebrew package works.
 
 ## GUI
 
