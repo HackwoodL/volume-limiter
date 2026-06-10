@@ -6,6 +6,8 @@
 
 Volume Limiter 是一个轻量级 macOS 最大音量限制器。我写它是为了防止连接新耳机时音频音量过大、伤害耳朵：它把每个输出设备限制在你设定的最大音量，一旦音量超过上限就立即压回。你可以通过「系统设置」里的面板，或一个小巧的命令行工具来控制它。
 
+**系统要求：** macOS 13 (Ventura) 及以上，支持 Apple Silicon 与 Intel。
+
 ## 功能
 
 - 限制最大输出音量——音量调过上限会被自动压回。
@@ -97,7 +99,7 @@ volume-limit --help                 # 显示用法
 
 ```text
 volume-limiterd is not running.
-Start it from System Settings > Volume Limiter, or with Homebrew: brew services start volume-limiter
+Open System Settings > Volume Limiter to start it.
 ```
 
 ## 卸载
@@ -154,3 +156,7 @@ brew uninstall --cask HackwoodL/tap/volume-limiter-gui
 ## prefPane 状态说明
 
 `NSPreferencePane` 已被 Apple 标记为 deprecated。Volume Limiter v1 仍优先使用它，因为它能在当前 macOS 上提供最接近“系统设置”的集成体验。如果未来 macOS 移除或进一步限制第三方 prefPane，fallback 方案是 SwiftUI 菜单栏 App，但仍保持同一个 daemon + IPC 瘦客户端架构。
+
+## 许可
+
+基于 [MIT License](LICENSE) 发布。

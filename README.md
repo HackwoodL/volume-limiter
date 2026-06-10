@@ -6,6 +6,8 @@
 
 Volume Limiter is a lightweight macOS app that caps your maximum output volume. I built it to stop a newly-connected headset from suddenly blasting audio and hurting your ears: it holds every output device to a maximum volume you choose, and pushes the volume back down the moment it goes above that limit. Control it from a pane in System Settings, or from a small command-line tool.
 
+**Requirements:** macOS 13 (Ventura) or later, on Apple Silicon or Intel.
+
 ## Features
 
 - Caps the maximum output volume — turn it up past the limit and it snaps back.
@@ -110,7 +112,7 @@ If the daemon is not running, the CLI prints:
 
 ```text
 volume-limiterd is not running.
-Start it from System Settings > Volume Limiter, or with Homebrew: brew services start volume-limiter
+Open System Settings > Volume Limiter to start it.
 ```
 
 ## Uninstall
@@ -170,3 +172,7 @@ Remaining follow-up validation: HDMI/AirPlay/aggregate/unsupported output device
 ## Preference pane status
 
 `NSPreferencePane` is deprecated. Volume Limiter keeps it as the preferred v1 GUI because it integrates with System Settings on current macOS versions, but future macOS releases may remove or further restrict third-party preference panes. If that becomes unreliable, the fallback is a SwiftUI menu bar app that still talks to the same daemon.
+
+## License
+
+Released under the [MIT License](LICENSE).
