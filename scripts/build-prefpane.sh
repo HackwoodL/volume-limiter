@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$ROOT/scripts/lib-build.sh"
 SDK="$(xcrun --sdk macosx --show-sdk-path)"
 BUILD_DIR="$ROOT/.build/prefpane"
 BUNDLE="$BUILD_DIR/VolumeLimiter.prefPane"
@@ -39,6 +40,14 @@ for arch in "${ARCHS[@]}"; do
 done
 
 lipo -create "${ARCH_OUTPUTS[@]}" -output "$EXECUTABLE"
+
+# Embed the universal, ad-hoc-signed daemon + CLI so the pane is self-contained:
+# on first load it copies the daemon out and starts it (see autoInstallDaemonIfNeeded).
+# Set VL_NO_BUNDLED_DAEMON=1 to skip (e.g. for a GUI-only dev build).
+if [ "${VL_NO_BUNDLED_DAEMON:-0}" != "1" ]; then
+  vl_build_cli_daemon "$BUNDLE/Contents/Resources/bin"
+fi
+
 codesign --force --sign - "$BUNDLE" >/dev/null
 xattr -cr "$BUNDLE"
 

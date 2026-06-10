@@ -95,6 +95,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         mainView = rootView
         refreshStatus()
         startAutoRefresh()
+        autoInstallDaemonIfNeeded()
         return rootView
     }
 
@@ -336,6 +337,25 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             apply(response)
         } catch {
             showDaemonError(error)
+        }
+    }
+
+    /// On first run (e.g. right after a DMG install) the daemon isn't running
+    /// yet. If this prefPane ships a bundled daemon, install and start it
+    /// automatically so the user doesn't have to press Start.
+    private func autoInstallDaemonIfNeeded() {
+        guard FileManager.default.isExecutableFile(atPath: LaunchAgentManager.bundledDaemonPath) else {
+            return
+        }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let ping = IPCRequest(id: UUID().uuidString, cmd: IPCCommand.ping.rawValue)
+            if (try? UnixSocketClient().send(ping)) != nil {
+                return
+            }
+            try? LaunchAgentManager.setEnabled(true)
+            DispatchQueue.main.async {
+                self?.refreshStatus()
+            }
         }
     }
 
@@ -1001,9 +1021,10 @@ private enum LaunchAgentManager {
     }
 
     private static func install() throws {
-        guard let daemonPath = resolvedDaemonPath() else {
-            throw PreferencePaneError.daemonExecutableNotFound
-        }
+        // Stop any currently-loaded instance first so its binary can be replaced.
+        try? runLaunchctl(["bootout", "gui/\(getuid())", plistURL.path])
+
+        let daemonPath = try ensureDaemonAvailable()
 
         try FileManager.default.createDirectory(
             at: plistURL.deletingLastPathComponent(),
@@ -1011,9 +1032,8 @@ private enum LaunchAgentManager {
         )
         try launchAgentPlist(daemonPath: daemonPath).write(to: plistURL, atomically: true, encoding: .utf8)
 
-        // Make (re)starting idempotent: a previous instance may still be loaded,
-        // and `bootstrap` can briefly return EIO right after a `bootout`.
-        try? runLaunchctl(["bootout", "gui/\(getuid())", plistURL.path])
+        // Make (re)starting idempotent: `bootstrap` can briefly return EIO right
+        // after a `bootout`.
         var lastError: Error?
         for _ in 0..<5 {
             do {
@@ -1030,6 +1050,38 @@ private enum LaunchAgentManager {
             throw lastError
         }
         try? runLaunchctl(["enable", "gui/\(getuid())/\(label)"])
+    }
+
+    /// Returns a runnable daemon path. When this prefPane ships a bundled daemon
+    /// (the DMG/self-contained build), it is copied out to the per-user support
+    /// directory together with the CLI, so the LaunchAgent path stays stable even
+    /// if the pane is later moved or replaced.
+    private static func ensureDaemonAvailable() throws -> String {
+        let fm = FileManager.default
+
+        if fm.isExecutableFile(atPath: bundledDaemonPath) {
+            let dest = installedDaemonPath
+            let binDir = (dest as NSString).deletingLastPathComponent
+            try fm.createDirectory(atPath: binDir, withIntermediateDirectories: true)
+            if fm.fileExists(atPath: dest) {
+                try? fm.removeItem(atPath: dest)
+            }
+            try fm.copyItem(atPath: bundledDaemonPath, toPath: dest)
+
+            let cliDest = binDir + "/volume-limit"
+            if fm.isExecutableFile(atPath: bundledCLIPath) {
+                if fm.fileExists(atPath: cliDest) {
+                    try? fm.removeItem(atPath: cliDest)
+                }
+                try? fm.copyItem(atPath: bundledCLIPath, toPath: cliDest)
+            }
+            return dest
+        }
+
+        if let existing = resolvedDaemonPath() {
+            return existing
+        }
+        throw PreferencePaneError.daemonExecutableNotFound
     }
 
     private static func uninstall() throws {
@@ -1082,6 +1134,21 @@ private enum LaunchAgentManager {
             .appendingPathComponent("bin", isDirectory: true)
             .appendingPathComponent("volume-limiterd")
             .path
+    }
+
+    private static var bundledBinURL: URL {
+        Bundle(for: VolumeLimiterPreferencePane.self).bundleURL
+            .appendingPathComponent("Contents", isDirectory: true)
+            .appendingPathComponent("Resources", isDirectory: true)
+            .appendingPathComponent("bin", isDirectory: true)
+    }
+
+    static var bundledDaemonPath: String {
+        bundledBinURL.appendingPathComponent("volume-limiterd").path
+    }
+
+    static var bundledCLIPath: String {
+        bundledBinURL.appendingPathComponent("volume-limit").path
     }
 
     private static func resolvedDaemonPath() -> String? {
