@@ -102,13 +102,15 @@ Start it with: brew services start volume-limiter
 | 程序化触发回压延迟 | 设置 limit 20%，脚本触发到 30%，目标 `<100ms` | `clamp-latency-ms=9.66`，通过 |
 | 键盘音量键回压延迟 | 设置 limit 20%，人工按音量增大键，目标 `<100ms` | `clamp-latency-ms=5.06`，通过 |
 | Bluetooth-only | 非蓝牙跳过，蓝牙设备生效 | 使用 fake audio adapter 自检通过 |
+| 蓝牙输出识别 | 连接并切换到 OPPO Enco Free4，运行 `volume-limit status` | `Device is Bluetooth: yes`，通过 |
+| 蓝牙设备超限回压延迟 | OPPO Enco Free4，limit 20%，脚本触发到 35%，目标 `<100ms` | `clamp-latency-ms=22.01`，通过 |
+| 蓝牙断开/重连后封顶 | OPPO Enco Free4 在限制关闭时设到 55%，断开；重新启用限制后重连 | 重连后 `Current volume: 20%`，通过 |
 | 不支持音量控制诊断 | status 暴露 diagnostics | 代码路径已实现；真实硬件未覆盖 |
 
 尚未完成的真实交互项：
 
 | 项目 | 未执行原因 | 手动验证命令/步骤 |
 | --- | --- | --- |
-| 蓝牙连接/断开/重连 | 需要真实蓝牙耳机交互 | 连接、断开、重连蓝牙耳机后运行 `volume-limit status` 并观察是否立即封顶 |
 | HDMI/AirPlay/aggregate device | 需要对应外设 | 切换输出设备后运行 `volume-limit status` 查看 diagnostics |
 
 ## 4. CLI 前端
@@ -199,4 +201,4 @@ ps -o pid=,%cpu=,rss=,comm= -p <pid>
 
 已完成并真实验证：Core/IPC/CLI 自动化测试、真实 daemon + CLI smoke、单实例冲突、prefPane 构建/签名/安装/Bundle 加载、System Settings 视觉确认和截图、键盘音量键 `<100ms` 回压延迟、基础资源占用采样。
 
-尚需人工或后续阶段验证：蓝牙重连、外接/不支持音量设备、重启自启、Homebrew 分装与卸载。
+尚需人工或后续阶段验证：外接/不支持音量设备、重启自启、Homebrew 分装与卸载。
