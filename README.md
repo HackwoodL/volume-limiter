@@ -10,7 +10,7 @@
 
 Volume Limiter is a lightweight macOS app that caps your maximum output volume. I built it to stop a newly-connected headset from suddenly blasting audio and hurting your ears: it holds every output device to a maximum volume you choose, and pushes the volume back down the moment it goes above that limit. Control it from a pane in System Settings, or from a small command-line tool.
 
-**[⬇ Download the latest release](https://github.com/HackwoodL/volume-limiter/releases/latest)** — open the DMG and double-click `VolumeLimiter.prefPane` to install, or run `brew install --cask HackwoodL/tap/volume-limiter-gui`.
+**[⬇ Download the latest release](https://github.com/HackwoodL/volume-limiter/releases/latest)** — open the DMG and double-click `VolumeLimiter.prefPane` to install, or run `brew install --cask HackwoodL/tap/volume-limiter`.
 
 **Requirements:** macOS 13 (Ventura) or later, on Apple Silicon or Intel.
 
@@ -26,21 +26,13 @@ Volume Limiter is a lightweight macOS app that caps your maximum output volume. 
 
 ### Easiest: double-click install from a DMG (recommended)
 
-Open `VolumeLimiter-<version>.dmg`, then **double-click `VolumeLimiter.prefPane`**
-inside it. Click **Install** when System Settings asks. The background service
-starts automatically — set your cap and you're done. No Terminal, clone, or
-Homebrew required.
+Download `VolumeLimiter-<version>.dmg` from the [latest release](https://github.com/HackwoodL/volume-limiter/releases/latest), open it, then **double-click `VolumeLimiter.prefPane`** inside. Click **Install** when System Settings asks. The background service starts automatically — set your cap and you're done. No Terminal, clone, or Homebrew required.
 
 To uninstall, open System Settings ▸ Volume Limiter and click **Uninstall**.
 
-> Prebuilt DMGs aren't published to Releases yet. Until then, build one locally
-> with `scripts/build-dmg.sh` (it prints the path to the `.dmg`), or use the
-> one-command source install below.
->
-> Because I can't afford an Apple Developer Program membership, the build is
-> ad-hoc signed and not notarized. After downloading a published DMG, macOS may
-> ask you to approve the pane in System Settings ▸ Privacy & Security, or to
-> right-click ▸ Open it the first time.
+> The build is ad-hoc signed and not notarized (no paid Apple Developer account),
+> so on first install macOS may ask you to approve the pane in
+> System Settings ▸ Privacy & Security, or to right-click ▸ Open it.
 
 ### From source
 
@@ -70,20 +62,20 @@ swift run volume-limiter-tests
 scripts/test-cli-daemon.py
 ```
 
-### Homebrew (planned — not published yet)
+### Homebrew
 
-Once the personal tap is published, one command installs **and** starts everything
-(the cask carries the self-contained pane, which bundles the service and CLI):
+One command installs **and** starts everything (the cask carries the
+self-contained pane, which bundles the service and CLI):
 
 ```bash
-brew install --cask HackwoodL/tap/volume-limiter-gui
+brew install --cask HackwoodL/tap/volume-limiter
 ```
 
 Uninstalling is also one command — it stops the service and removes the agent,
 config, and pane:
 
 ```bash
-brew uninstall --cask HackwoodL/tap/volume-limiter-gui
+brew uninstall --cask HackwoodL/tap/volume-limiter
 ```
 
 ## GUI
@@ -141,10 +133,10 @@ rm -rf ~/Library/Application\ Support/VolumeLimiter \
        ~/Library/LaunchAgents/com.hackwoodl.volumelimiter.plist
 ```
 
-### Homebrew (once published)
+### Homebrew
 
 ```bash
-brew uninstall --cask HackwoodL/tap/volume-limiter-gui
+brew uninstall --cask HackwoodL/tap/volume-limiter
 ```
 
 ## Architecture

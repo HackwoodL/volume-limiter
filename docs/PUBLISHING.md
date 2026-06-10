@@ -34,32 +34,22 @@ git push origin v0.1.0
 ```
 
 Attach `VolumeLimiter-0.1.0.dmg` to the GitHub Release — the cask downloads it.
-(GitHub also generates a source tarball automatically, which the optional
-CLI-only formula builds from.)
-
-> The cask points at `VolumeLimiter-<version>.dmg`. If you automate the release,
-> make sure the workflow builds and uploads that DMG with `scripts/build-dmg.sh`
-> (the current `release.yml` predates the DMG and only builds the zips).
+(`release.yml` does this automatically on a `v*` tag via `scripts/build-dmg.sh`.)
 
 ## Update the Homebrew tap
 
 The cask is self-contained: the pane bundles `volume-limiterd` and `volume-limit`
-and starts the service itself, so it does **not** depend on the formula. After the
-release exists:
-
-1. Put the DMG's SHA256 into `sha256` and the release URL into `url` in
-   `Casks/volume-limiter-gui.rb`.
-2. (Optional) Update `Formula/volume-limiter.rb` only if you also want a
-   CLI-only `brew install volume-limiter` for headless users.
+and starts the service itself. After the release exists, put the DMG's SHA256 into
+`sha256` and the release URL into `url` in `Casks/volume-limiter.rb`, then copy it
+to the tap:
 
 ```bash
 git clone git@github.com:HackwoodL/homebrew-tap.git ../homebrew-tap
-mkdir -p ../homebrew-tap/Casks ../homebrew-tap/Formula
-cp Casks/volume-limiter-gui.rb ../homebrew-tap/Casks/
-cp Formula/volume-limiter.rb  ../homebrew-tap/Formula/   # optional, CLI-only
+mkdir -p ../homebrew-tap/Casks
+cp Casks/volume-limiter.rb ../homebrew-tap/Casks/
 cd ../homebrew-tap
-git add Casks/volume-limiter-gui.rb Formula/volume-limiter.rb
-git commit -m "Add Volume Limiter cask"
+git add Casks/volume-limiter.rb
+git commit -m "Update Volume Limiter cask"
 git push origin main
 ```
 
@@ -68,7 +58,7 @@ git push origin main
 One command installs **and** starts everything:
 
 ```bash
-brew install --cask HackwoodL/tap/volume-limiter-gui
+brew install --cask HackwoodL/tap/volume-limiter
 volume-limit status
 ```
 
@@ -76,5 +66,5 @@ One command removes it — the cask's `uninstall`/`zap` stop the service and del
 the LaunchAgent, config, and pane:
 
 ```bash
-brew uninstall --cask HackwoodL/tap/volume-limiter-gui
+brew uninstall --cask HackwoodL/tap/volume-limiter
 ```
