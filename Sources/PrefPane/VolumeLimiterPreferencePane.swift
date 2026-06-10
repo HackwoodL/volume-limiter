@@ -18,7 +18,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     private var notifyOnLimitButton = NSButton(checkboxWithTitle: "Notify when volume is limited", target: nil, action: nil)
 
     public override func loadMainView() -> NSView {
-        let rootView = NSView(frame: NSRect(x: 0, y: 0, width: 560, height: 360))
+        let rootView = NSView(frame: NSRect(x: 0, y: 0, width: 600, height: 430))
         rootView.translatesAutoresizingMaskIntoConstraints = false
 
         let title = NSTextField(labelWithString: "Volume Limiter")
@@ -85,7 +85,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         ])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 12
+        stack.spacing = 8
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         rootView.addSubview(stack)
@@ -93,6 +93,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             stack.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 24),
             stack.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -24),
             stack.topAnchor.constraint(equalTo: rootView.topAnchor, constant: 24),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: rootView.bottomAnchor, constant: -24),
             limitSlider.widthAnchor.constraint(greaterThanOrEqualToConstant: 300)
         ])
 

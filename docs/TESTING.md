@@ -141,8 +141,10 @@ Start it with: brew services start volume-limiter
 | Bundle 加载 | `Bundle(path: ...).load()` | true | `bundle-loaded=true` |
 | Principal class | `bundle.principalClass` | prefPane class | `VolumeLimiterPrefPane.VolumeLimiterPreferencePane` |
 | 系统设置打开请求 | `open ~/Library/PreferencePanes/VolumeLimiter.prefPane` | System Settings 打开该 pane | 命令退出 0 |
+| 系统设置视觉确认 | 人工检查 System Settings 面板 | 面板显示完整控件，无底部裁切 | 成功；首次发现 `Diagnostics` 底部裁切，已通过加高主视图和压缩间距修复 |
+| 系统设置截图 | `screencapture -x docs/screenshots/prefpane-system-settings.png` | 保存真实截图 | 成功，路径见下方 |
 
-截图状态：未生成截图，未伪造。建议人工确认后将截图保存为：
+截图：
 
 ```text
 docs/screenshots/prefpane-system-settings.png
