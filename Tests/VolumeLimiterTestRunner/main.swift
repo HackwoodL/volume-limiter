@@ -15,6 +15,8 @@ struct VolumeLimiterTestRunner {
         try suite.run("Core bluetooth-only clamps Bluetooth devices", testBluetoothOnlyClampsBluetoothDevices)
         try suite.run("Core rejects invalid limit", testInvalidLimitIsRejected)
         try suite.run("Core disabled limiter does not clamp", testDisabledLimiterDoesNotClamp)
+        try suite.run("Core notifies when limit is enforced", testNotifyOnLimit)
+        try suite.run("Core does not notify when notify disabled", testNotifyDisabled)
         try suite.run("Core config store persists settings", testConfigStorePersistsSettings)
         try suite.run("IPC request/response Codable round trip", testRequestAndResponseCodableRoundTrip)
         try suite.run("IPC Unix socket handles newline JSON", testUnixSocketServerHandlesOneLineJSONRequests)
@@ -158,6 +160,32 @@ private func testDisabledLimiterDoesNotClamp() throws {
 
     try expectEqual(audio.setVolumeCalls, [])
     try expectEqual(audio.volume, 80)
+}
+
+private func testNotifyOnLimit() throws {
+    let audio = FakeAudioHardware(volume: 80)
+    let notifier = FakeNotifier()
+    let config = try VolumeLimiterConfig(limit: 40, notifyOnLimit: true)
+    let engine = try makeEngine(audio: audio, config: config, notifier: notifier)
+
+    try engine.start()
+
+    try expectEqual(audio.volume, 40)
+    try expectEqual(notifier.events, [
+        NotificationEvent(from: 80, to: 40, deviceName: "Fake Speakers")
+    ])
+}
+
+private func testNotifyDisabled() throws {
+    let audio = FakeAudioHardware(volume: 80)
+    let notifier = FakeNotifier()
+    let config = try VolumeLimiterConfig(limit: 40, notifyOnLimit: false)
+    let engine = try makeEngine(audio: audio, config: config, notifier: notifier)
+
+    try engine.start()
+
+    try expectEqual(audio.volume, 40)
+    try expectEqual(notifier.events, [])
 }
 
 private func testConfigStorePersistsSettings() throws {
@@ -360,14 +388,15 @@ private func testCLITalksToServerOverUnixSocket() throws {
 
 private func makeEngine(
     audio: FakeAudioHardware,
-    config: VolumeLimiterConfig
+    config: VolumeLimiterConfig,
+    notifier: VolumeLimitNotifying = NoopVolumeLimitNotifier()
 ) throws -> VolumeLimiterEngine {
     let url = FileManager.default.temporaryDirectory
         .appendingPathComponent(UUID().uuidString, isDirectory: true)
         .appendingPathComponent("config.json")
     let store = VolumeLimiterConfigStore(fileURL: url)
     try store.save(config)
-    return try VolumeLimiterEngine(audio: audio, configStore: store)
+    return try VolumeLimiterEngine(audio: audio, configStore: store, notifier: notifier)
 }
 
 private final class FakeAudioHardware: AudioHardwareControlling {
@@ -443,6 +472,20 @@ private final class FakeCLIClient: VolumeLimiterClientSending {
             return IPCResponse.failure(id: request.id, code: "testFailure", message: "missing fake response")
         }
         return responses.removeFirst()
+    }
+}
+
+private struct NotificationEvent: Equatable {
+    var from: Int
+    var to: Int
+    var deviceName: String
+}
+
+private final class FakeNotifier: VolumeLimitNotifying {
+    var events: [NotificationEvent] = []
+
+    func volumeWasLimited(from currentVolume: Int, to limit: Int, deviceName: String) {
+        events.append(NotificationEvent(from: currentVolume, to: limit, deviceName: deviceName))
     }
 }
 

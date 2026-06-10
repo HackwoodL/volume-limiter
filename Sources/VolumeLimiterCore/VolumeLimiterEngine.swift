@@ -34,19 +34,32 @@ public struct VolumeLimiterStatus: Codable, Equatable {
     }
 }
 
+public protocol VolumeLimitNotifying: AnyObject {
+    func volumeWasLimited(from currentVolume: Int, to limit: Int, deviceName: String)
+}
+
+public final class NoopVolumeLimitNotifier: VolumeLimitNotifying {
+    public init() {}
+
+    public func volumeWasLimited(from currentVolume: Int, to limit: Int, deviceName: String) {}
+}
+
 public final class VolumeLimiterEngine {
     private let audio: AudioHardwareControlling
     private let configStore: VolumeLimiterConfigStore
+    private let notifier: VolumeLimitNotifying
     private let lock = NSRecursiveLock()
     private var config: VolumeLimiterConfig
     private var runtimeDiagnostics: [AudioDiagnostic] = []
 
     public init(
         audio: AudioHardwareControlling,
-        configStore: VolumeLimiterConfigStore = VolumeLimiterConfigStore()
+        configStore: VolumeLimiterConfigStore = VolumeLimiterConfigStore(),
+        notifier: VolumeLimitNotifying = NoopVolumeLimitNotifier()
     ) throws {
         self.audio = audio
         self.configStore = configStore
+        self.notifier = notifier
         self.config = try configStore.load()
     }
 
@@ -175,6 +188,13 @@ public final class VolumeLimiterEngine {
 
         if currentVolume > config.limit {
             try audio.setOutputVolume(deviceID: deviceID, percent: config.limit)
+            if config.notifyOnLimit {
+                notifier.volumeWasLimited(
+                    from: currentVolume,
+                    to: config.limit,
+                    deviceName: snapshot.name
+                )
+            }
         }
     }
 

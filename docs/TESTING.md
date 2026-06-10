@@ -9,7 +9,7 @@
 | 项目 | 命令 | 预期结果 | 实际结果 |
 | --- | --- | --- | --- |
 | 构建 SwiftPM 工程 | `swift build` | 构建成功 | 成功 |
-| Core/IPC/CLI 自检 | `swift run volume-limiter-tests` | 所有测试通过 | 16 项全部通过 |
+| Core/IPC/CLI 自检 | `swift run volume-limiter-tests` | 所有测试通过 | 18 项全部通过 |
 | daemon + CLI 实机 smoke | `scripts/test-cli-daemon.py` | daemon 启动，CLI 可用，重复 daemon 被拒绝 | 成功 |
 | prefPane 构建 | `scripts/build-prefpane.sh` | 生成 ad-hoc 签名 `.prefPane` | 成功 |
 | prefPane 安装 | `scripts/install-prefpane.sh` | 安装到 `~/Library/PreferencePanes` | 成功 |
@@ -27,6 +27,8 @@ PASS Core bluetooth-only skips non-Bluetooth devices
 PASS Core bluetooth-only clamps Bluetooth devices
 PASS Core rejects invalid limit
 PASS Core disabled limiter does not clamp
+PASS Core notifies when limit is enforced
+PASS Core does not notify when notify disabled
 PASS Core config store persists settings
 PASS IPC request/response Codable round trip
 PASS IPC Unix socket handles newline JSON
@@ -37,7 +39,7 @@ PASS CLI get renders compact daemon status
 PASS CLI rejects invalid limit locally
 PASS CLI maps daemon connection failure
 PASS CLI talks to server over Unix socket
-All 16 Volume Limiter tests passed.
+All 18 Volume Limiter tests passed.
 ```
 
 `scripts/test-cli-daemon.py` 关键输出：
@@ -109,6 +111,7 @@ Start it with: brew services start volume-limiter
 | 蓝牙设备超限回压延迟 | OPPO Enco Free4，limit 20%，脚本触发到 35%，目标 `<100ms` | `clamp-latency-ms=22.01`，通过 |
 | 蓝牙断开/重连后封顶 | OPPO Enco Free4 在限制关闭时设到 55%，断开；重新启用限制后重连 | 重连后 `Current volume: 20%`，通过 |
 | Type-C 有线耳机 | Poly Blackwire 3325 Series，limit 20%，脚本触发到 35%，目标 `<100ms` | `Volume control available: yes`，`clamp-latency-ms=63.63`，通过 |
+| 超限通知 | notify 开启且发生实际回压时 | 单元测试确认会触发 notifier；daemon 使用 macOS `osascript` 通知并做 5 秒节流 |
 | 不支持音量控制诊断 | status 暴露 diagnostics | 代码路径已实现；真实硬件未覆盖 |
 
 尚未完成的真实交互项：

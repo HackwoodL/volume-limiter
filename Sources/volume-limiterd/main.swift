@@ -8,7 +8,10 @@ private let socketPath = VolumeLimiterIPC.defaultSocketPath()
 private let engine: VolumeLimiterEngine
 
 do {
-    engine = try VolumeLimiterEngine(audio: CoreAudioHardware())
+    engine = try VolumeLimiterEngine(
+        audio: CoreAudioHardware(),
+        notifier: AppleScriptVolumeLimitNotifier()
+    )
 } catch {
     fputs("volume-limiterd: failed to initialize engine: \(error.localizedDescription)\n", stderr)
     exit(1)

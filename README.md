@@ -14,6 +14,7 @@ Volume Limiter is a lightweight macOS maximum-volume limiter. A single per-user 
 - GUI: ad-hoc signed `VolumeLimiter.prefPane` for macOS System Settings.
 - Shared config owned by the daemon.
 - Optional Bluetooth-only mode.
+- Optional macOS notification when volume is capped.
 - No kernel extension, no virtual audio driver, no Developer ID, no notarization.
 
 ## Install
@@ -135,7 +136,7 @@ rm -rf ~/Library/Application\ Support/VolumeLimiter \
 
 ## Testing
 
-See [`docs/TESTING.md`](docs/TESTING.md). Current coverage includes Core policy tests, IPC protocol tests, CLI parser/rendering tests, Unix socket conflict tests, real daemon + CLI smoke tests, prefPane bundle build/sign/load checks, System Settings screenshot, keyboard volume-key latency, Bluetooth reconnect, Type-C wired headset, reboot auto-start, and a short idle resource sample.
+See [`docs/TESTING.md`](docs/TESTING.md). Current coverage includes Core policy tests, notification trigger tests, IPC protocol tests, CLI parser/rendering tests, Unix socket conflict tests, real daemon + CLI smoke tests, prefPane bundle build/sign/load checks, System Settings screenshot, keyboard volume-key latency, Bluetooth reconnect, Type-C wired headset, reboot auto-start, and a short idle resource sample.
 
 Remaining follow-up validation: HDMI/AirPlay/aggregate/unsupported output devices when hardware is available, and Homebrew install/uninstall against the public tap after release SHA values are available.
 
