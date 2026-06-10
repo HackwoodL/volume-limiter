@@ -186,17 +186,17 @@ ps -o pid=,%cpu=,rss=,comm= -p <pid>
 
 ## 8. 开机自启、分装与卸载
 
-这些项目依赖后续 Homebrew Formula/Cask 和重启流程，尚未执行：
+这些项目依赖后续 GitHub Release、Homebrew tap 和重启流程，尚未执行：
 
 | 项目 | 当前状态 | 后续验证方式 |
 | --- | --- | --- |
 | LaunchAgent 开机自启 | prefPane 已实现同 label 的开关；未重启验证 | 安装 formula 后启用开关，重启，再运行 `volume-limit status` |
-| 只装 CLI | Formula 尚未完成 | Stage 6 完成 Formula 后测试 |
-| 只装 GUI 自动带 daemon | Cask 尚未完成 | Stage 6 完成 Cask 后测试 |
-| 分别卸载与 zap | Cask/Formula 尚未完成 | Stage 6 完成后测试 |
+| 只装 CLI | Formula 已准备；GitHub Release 和 SHA 尚未发布替换 | 发布 tag/release 后 `brew install HackwoodL/tap/volume-limiter` |
+| 只装 GUI 自动带 daemon | Cask 已准备；GUI zip SHA 尚未发布替换 | 发布 tag/release 后 `brew install --cask HackwoodL/tap/volume-limiter-gui` |
+| 分别卸载与 zap | 需要真实 tap 安装后验证 | 发布后执行 uninstall/zap 流程 |
 
 ## 9. 结论
 
-已完成并真实验证：Core/IPC/CLI 自动化测试、真实 daemon + CLI smoke、单实例冲突、prefPane 构建/签名/安装/Bundle 加载、基础资源占用采样。
+已完成并真实验证：Core/IPC/CLI 自动化测试、真实 daemon + CLI smoke、单实例冲突、prefPane 构建/签名/安装/Bundle 加载、System Settings 视觉确认和截图、键盘音量键 `<100ms` 回压延迟、基础资源占用采样。
 
-尚需人工或后续阶段验证：System Settings 视觉截图、键盘音量键 `<100ms` 延迟、蓝牙重连、外接/不支持音量设备、重启自启、Homebrew 分装与卸载。
+尚需人工或后续阶段验证：蓝牙重连、外接/不支持音量设备、重启自启、Homebrew 分装与卸载。
