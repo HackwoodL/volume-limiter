@@ -17,6 +17,7 @@ ARCHS=(arm64 x86_64)
 rm -rf "$BUNDLE" "$BUILD_DIR/objects"
 mkdir -p "$BUNDLE/Contents/MacOS" "$BUNDLE/Contents/Resources" "$BUILD_DIR/objects"
 cp "$INFO_PLIST" "$BUNDLE/Contents/Info.plist"
+cp -R "$ROOT/Sources/PrefPane/Resources/"* "$BUNDLE/Contents/Resources/"
 
 ARCH_OUTPUTS=()
 for arch in "${ARCHS[@]}"; do

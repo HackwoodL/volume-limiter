@@ -2,7 +2,7 @@
 
 测试日期：2026-06-10  
 测试机器：macOS Darwin 25.5.0，arm64，Command Line Tools Swift 6.0.3  
-当前限制：本机只有 Command Line Tools，没有完整 Xcode；prefPane 使用 `swiftc` 手工构建，不使用 `xcodebuild`。系统设置视觉确认、截图、键盘音量键、蓝牙耳机、重启验证需要人工交互，未伪造结果。
+当前限制：本机只有 Command Line Tools，没有完整 Xcode；prefPane 使用 `swiftc` 手工构建，不使用 `xcodebuild`。Homebrew Formula 安装被当前 Command Line Tools 版本阻塞；HDMI/AirPlay/聚合设备/不支持音量控制设备因当前没有对应外设而未覆盖。
 
 ## 1. 自动化与本机 smoke 测试
 
@@ -149,6 +149,7 @@ Start it with: brew services start volume-limiter
 | 系统设置打开请求 | `open ~/Library/PreferencePanes/VolumeLimiter.prefPane` | System Settings 打开该 pane | 命令退出 0 |
 | 系统设置视觉确认 | 人工检查 System Settings 面板 | 面板显示完整控件，无底部裁切 | 成功；首次发现 `Diagnostics` 底部裁切，已通过加高主视图和压缩间距修复 |
 | 系统设置截图 | `screencapture -x docs/screenshots/prefpane-system-settings.png` | 保存真实截图 | 成功，路径见下方 |
+| 简体中文 GUI | `AppleLanguages=("zh-Hans")` 加载 prefPane 并遍历 label/button 文案 | 显示简体中文控件 | 成功，包含“上限”“当前音量”“仅限制蓝牙输出设备”等文案 |
 
 截图：
 

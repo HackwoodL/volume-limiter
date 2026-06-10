@@ -7,25 +7,37 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     private let client = UnixSocketClient()
     private var isUpdatingControls = false
 
-    private var limitLabel = NSTextField(labelWithString: "Limit: --%")
-    private var currentVolumeLabel = NSTextField(labelWithString: "Current volume: unavailable")
-    private var deviceLabel = NSTextField(labelWithString: "Device: unavailable")
+    private var limitLabel = NSTextField(labelWithString: localized("limit.placeholder"))
+    private var currentVolumeLabel = NSTextField(labelWithString: localized("currentVolume.unavailable"))
+    private var deviceLabel = NSTextField(labelWithString: localized("device.unavailable"))
     private var daemonStatusLabel = NSTextField(labelWithString: "")
     private var diagnosticsLabel = NSTextField(labelWithString: "")
     private var limitSlider = NSSlider(value: 50, minValue: 0, maxValue: 100, target: nil, action: nil)
-    private var bluetoothOnlyButton = NSButton(checkboxWithTitle: "Only limit Bluetooth outputs", target: nil, action: nil)
-    private var launchAtLoginButton = NSButton(checkboxWithTitle: "Start daemon at login", target: nil, action: nil)
-    private var notifyOnLimitButton = NSButton(checkboxWithTitle: "Notify when volume is limited", target: nil, action: nil)
+    private var bluetoothOnlyButton = NSButton(
+        checkboxWithTitle: localized("bluetoothOnly.checkbox"),
+        target: nil,
+        action: nil
+    )
+    private var launchAtLoginButton = NSButton(
+        checkboxWithTitle: localized("launchAtLogin.checkbox"),
+        target: nil,
+        action: nil
+    )
+    private var notifyOnLimitButton = NSButton(
+        checkboxWithTitle: localized("notifyOnLimit.checkbox"),
+        target: nil,
+        action: nil
+    )
 
     public override func loadMainView() -> NSView {
         let rootView = NSView(frame: NSRect(x: 0, y: 0, width: 600, height: 430))
         rootView.translatesAutoresizingMaskIntoConstraints = false
 
-        let title = NSTextField(labelWithString: "Volume Limiter")
+        let title = NSTextField(labelWithString: localized("app.title"))
         title.font = .systemFont(ofSize: 24, weight: .semibold)
 
         let subtitle = NSTextField(
-            wrappingLabelWithString: "Caps the current macOS output volume through the shared volume-limiterd daemon."
+            wrappingLabelWithString: localized("app.subtitle")
         )
         subtitle.textColor = .secondaryLabelColor
 
@@ -43,9 +55,13 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         notifyOnLimitButton.target = self
         notifyOnLimitButton.action = #selector(notifyOnLimitChanged(_:))
 
-        let refreshButton = NSButton(title: "Refresh", target: self, action: #selector(refreshButtonPressed(_:)))
+        let refreshButton = NSButton(
+            title: localized("refresh.button"),
+            target: self,
+            action: #selector(refreshButtonPressed(_:))
+        )
         let openCLIHelpButton = NSButton(
-            title: "Show daemon start command",
+            title: localized("showStartCommand.button"),
             target: self,
             action: #selector(showDaemonStartCommand(_:))
         )
@@ -145,10 +161,10 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         do {
             try LaunchAgentManager.setEnabled(sender.state == .on)
             daemonStatusLabel.stringValue = sender.state == .on
-                ? "LaunchAgent enabled: com.hackwoodl.volumelimiter"
-                : "LaunchAgent disabled."
+                ? localizedFormat("launchAgent.enabled", LaunchAgentManager.label)
+                : localized("launchAgent.disabled")
         } catch {
-            daemonStatusLabel.stringValue = "LaunchAgent error: \(error.localizedDescription)"
+            daemonStatusLabel.stringValue = localizedFormat("launchAgent.error", error.localizedDescription)
             launchAtLoginButton.state = LaunchAgentManager.isEnabled ? .on : .off
         }
     }
@@ -178,7 +194,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     }
 
     @objc private func showDaemonStartCommand(_: NSButton) {
-        daemonStatusLabel.stringValue = "Start daemon: brew services start volume-limiter"
+        daemonStatusLabel.stringValue = localized("daemon.startCommand")
     }
 
     private func refreshStatus() {
@@ -195,7 +211,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     private func send(_ request: IPCRequest) throws -> IPCResponse {
         let response = try client.send(request)
         guard response.ok else {
-            throw PreferencePaneError.daemon(response.error?.message ?? "daemon returned an unknown error")
+            throw PreferencePaneError.daemon(response.error?.message ?? localized("daemon.unknownError"))
         }
         return response
     }
@@ -206,37 +222,41 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
 
         let limit = response.limit ?? Int(limitSlider.doubleValue.rounded())
         limitSlider.integerValue = limit
-        limitLabel.stringValue = "Limit: \(limit)%"
+        limitLabel.stringValue = localizedFormat("limit.value", limit)
 
         if let currentVolume = response.currentVolume {
-            currentVolumeLabel.stringValue = "Current volume: \(currentVolume)%"
+            currentVolumeLabel.stringValue = localizedFormat("currentVolume.value", currentVolume)
         } else {
-            currentVolumeLabel.stringValue = "Current volume: unavailable"
+            currentVolumeLabel.stringValue = localized("currentVolume.unavailable")
         }
 
-        deviceLabel.stringValue = "Device: \(response.deviceName ?? "Unavailable")"
+        deviceLabel.stringValue = localizedFormat("device.value", response.deviceName ?? localized("value.unavailable"))
         bluetoothOnlyButton.state = (response.bluetoothOnly ?? false) ? .on : .off
         notifyOnLimitButton.state = (response.notifyOnLimit ?? false) ? .on : .off
 
-        let enabledText = (response.enabled ?? false) ? "on" : "off"
-        let controlText = (response.volumeControlAvailable ?? false) ? "available" : "unavailable"
-        let bluetoothText = (response.deviceIsBluetooth ?? false) ? "yes" : "no"
-        daemonStatusLabel.stringValue = "Daemon running. Limiter: \(enabledText). Volume control: \(controlText). Bluetooth device: \(bluetoothText)."
+        let enabledText = (response.enabled ?? false) ? localized("state.on") : localized("state.off")
+        let controlText = (response.volumeControlAvailable ?? false)
+            ? localized("state.available")
+            : localized("state.unavailable")
+        let bluetoothText = (response.deviceIsBluetooth ?? false) ? localized("state.yes") : localized("state.no")
+        daemonStatusLabel.stringValue = localizedFormat(
+            "daemon.status",
+            enabledText,
+            controlText,
+            bluetoothText
+        )
 
         let diagnostics = response.diagnostics ?? []
         diagnosticsLabel.stringValue = diagnostics.isEmpty
-            ? "Diagnostics: none"
-            : "Diagnostics: " + diagnostics.joined(separator: " | ")
+            ? localized("diagnostics.none")
+            : localizedFormat("diagnostics.value", diagnostics.joined(separator: " | "))
     }
 
     private func showDaemonError(_ error: Error) {
-        currentVolumeLabel.stringValue = "Current volume: unavailable"
-        deviceLabel.stringValue = "Device: unavailable"
-        diagnosticsLabel.stringValue = "Diagnostics: \(error.localizedDescription)"
-        daemonStatusLabel.stringValue = """
-        volume-limiterd is not running or did not respond.
-        Start it with: brew services start volume-limiter
-        """
+        currentVolumeLabel.stringValue = localized("currentVolume.unavailable")
+        deviceLabel.stringValue = localized("device.unavailable")
+        diagnosticsLabel.stringValue = localizedFormat("diagnostics.value", error.localizedDescription)
+        daemonStatusLabel.stringValue = localized("daemon.notResponding")
     }
 
     private func requestID() -> String {
@@ -268,11 +288,41 @@ private enum PreferencePaneError: Error, LocalizedError {
         case let .daemon(message):
             message
         case .daemonExecutableNotFound:
-            "volume-limiterd was not found in /opt/homebrew/bin, /usr/local/bin, or next to this preference pane."
+            localized("daemon.executableNotFound")
         case let .launchctlFailed(message):
             message
         }
     }
+}
+
+private func localized(_ key: String) -> String {
+    let bundle = localizationBundle()
+    return NSLocalizedString(
+        key,
+        tableName: nil,
+        bundle: bundle,
+        value: key,
+        comment: ""
+    )
+}
+
+private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
+    String(format: localized(key), locale: Locale.current, arguments: arguments)
+}
+
+private func localizationBundle() -> Bundle {
+    let preferredLanguage = Locale.preferredLanguages.first?.lowercased() ?? ""
+    let localization = preferredLanguage.hasPrefix("zh") ? "zh-Hans" : "en"
+    let baseBundle = Bundle(for: VolumeLimiterPreferencePane.self)
+
+    guard
+        let path = baseBundle.path(forResource: localization, ofType: "lproj"),
+        let bundle = Bundle(path: path)
+    else {
+        return baseBundle
+    }
+
+    return bundle
 }
 
 private enum LaunchAgentManager {

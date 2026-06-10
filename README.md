@@ -1,10 +1,10 @@
 # Volume Limiter
 
-![Volume Limiter prefPane screenshot placeholder](docs/screenshots/prefpane-system-settings.png)
+[简体中文](README.zh-CN.md)
+
+![Volume Limiter prefPane in System Settings](docs/screenshots/prefpane-system-settings.png)
 
 Volume Limiter is a lightweight macOS maximum-volume limiter. A single per-user daemon watches the current output device with Core Audio and immediately pushes volume back down when it exceeds your configured limit. The CLI and GUI are thin clients that talk to the same daemon over a Unix domain socket.
-
-> Screenshot note: `docs/screenshots/prefpane-system-settings.png` is intentionally pending until the System Settings pane is visually confirmed and captured on a real desktop.
 
 ## Features
 
@@ -135,9 +135,9 @@ rm -rf ~/Library/Application\ Support/VolumeLimiter \
 
 ## Testing
 
-See [`docs/TESTING.md`](docs/TESTING.md). Current automated coverage includes Core policy tests, IPC protocol tests, CLI parser/rendering tests, Unix socket conflict tests, real daemon + CLI smoke tests, prefPane bundle build/sign/load checks, and a short idle resource sample.
+See [`docs/TESTING.md`](docs/TESTING.md). Current coverage includes Core policy tests, IPC protocol tests, CLI parser/rendering tests, Unix socket conflict tests, real daemon + CLI smoke tests, prefPane bundle build/sign/load checks, System Settings screenshot, keyboard volume-key latency, Bluetooth reconnect, Type-C wired headset, reboot auto-start, and a short idle resource sample.
 
-Hardware-interactive tests still require manual validation: keyboard volume-key latency, Bluetooth reconnect behavior, external output devices, System Settings screenshot, reboot auto-start, and Homebrew install/uninstall flows.
+Remaining follow-up validation: HDMI/AirPlay/aggregate/unsupported output devices when hardware is available, and Homebrew install/uninstall after Command Line Tools are updated and release SHA values are available.
 
 ## Preference pane status
 
