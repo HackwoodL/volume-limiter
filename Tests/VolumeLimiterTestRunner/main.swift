@@ -36,7 +36,7 @@ struct VolumeLimiterTestRunner {
         try suite.run("IPC server returns structured error for invalid JSON", testServerRejectsInvalidJSON)
         try suite.run("IPC rejects active duplicate socket server", testUnixSocketServerRejectsDuplicateActiveServer)
         try suite.run("CLI set sends setLimit request", testCLISetSendsSetLimitRequest)
-        try suite.run("CLI get renders compact daemon status", testCLIGetRendersCompactStatus)
+        try suite.run("CLI status renders daemon status", testCLIStatusRendersDaemonStatus)
         try suite.run("CLI rejects invalid limit locally", testCLIRejectsInvalidLimit)
         try suite.run("CLI maps daemon connection failure", testCLIMapsDaemonConnectionFailure)
         try suite.run("CLI talks to server over Unix socket", testCLITalksToServerOverUnixSocket)
@@ -333,7 +333,7 @@ private func testCLISetSendsSetLimitRequest() throws {
     ])
 }
 
-private func testCLIGetRendersCompactStatus() throws {
+private func testCLIStatusRendersDaemonStatus() throws {
     let client = FakeCLIClient(
         responses: [
             IPCResponse(
@@ -343,13 +343,18 @@ private func testCLIGetRendersCompactStatus() throws {
                 limit: 45,
                 currentVolume: 12,
                 deviceName: "Fake Speakers",
-                headphoneOnly: false
+                headphoneOnly: false,
+                notifyOnLimit: false,
+                deviceIsHeadphone: false,
+                volumeControlAvailable: true,
+                diagnostics: [],
+                defaultLimit: 45
             )
         ]
     )
     let runner = VolumeLimitCommandRunner(client: client, requestID: { "fixed-id" })
 
-    let output = runner.run(arguments: ["get"])
+    let output = runner.run(arguments: ["status"])
 
     try expectEqual(output.exitCode, 0)
     try expectTrue(output.stdout.contains("Limit: 45%"), "Limit line")
@@ -410,9 +415,9 @@ private func testCLITalksToServerOverUnixSocket() throws {
     try expectEqual(setOutput.exitCode, 0)
     try expectEqual(setOutput.stdout, "Default limit set to 42%.\n")
 
-    let getOutput = runner.run(arguments: ["get"])
-    try expectEqual(getOutput.exitCode, 0)
-    try expectTrue(getOutput.stdout.contains("Limit: 42%"), "updated limit from socket server")
+    let statusOutput = runner.run(arguments: ["status"])
+    try expectEqual(statusOutput.exitCode, 0)
+    try expectTrue(statusOutput.stdout.contains("Limit: 42%"), "updated limit from socket server")
 }
 
 private func testPerDeviceOverrideClampsToDeviceLimit() throws {

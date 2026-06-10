@@ -58,24 +58,26 @@ Volume control available: yes
 Notify on limit: off
 Diagnostics: none
 $ volume-limit set 100
-Limit set to 100%.
-$ volume-limit get
-Limit: 100%
+Default limit set to 100%.
+$ volume-limit status
+Volume Limiter daemon: running
+Enabled: on
+Limit: 100% (default)
+Default limit: 100%
 Current volume: 0%
 Device: MacBook Air扬声器
-Enabled: on
 Headphone-only: off
 $ volume-limit off
 Volume limiting is off.
 $ volume-limit on
 Volume limiting is on.
-$ volume-limit headphone-only status
-Headphone-only mode is off.
+$ volume-limit headphone-only on
+Headphone-only mode is on.
 $ volume-limiterd # duplicate
 volume-limiterd: failed to start: bind failed: Address already in use
 $ volume-limit status # daemon stopped
 volume-limiterd is not running.
-Start it with: brew services start volume-limiter
+Start it from System Settings > Volume Limiter, or with Homebrew: brew services start volume-limiter
 ```
 
 ## 2. IPC 与单实例约束
@@ -125,11 +127,11 @@ Start it with: brew services start volume-limiter
 
 | 命令 | 预期结果 | 实际结果 |
 | --- | --- | --- |
-| `volume-limit set <0-100>` | 通过 socket 设置上限 | 实机 smoke 通过 |
-| `volume-limit get` | 显示上限、当前音量、设备名 | 实机 smoke 通过 |
+| `volume-limit set <0-100>` | 通过 socket 设置默认上限 | 实机 smoke 通过 |
 | `volume-limit on/off` | 启停封顶 | 实机 smoke 通过 |
-| `volume-limit status` | 显示 daemon 和设备状态 | 实机 smoke 通过 |
-| `volume-limit headphone-only status` | 显示耳机模式 | 实机 smoke 通过 |
+| `volume-limit status` | 显示 daemon、设备和分设备上限状态 | 实机 smoke 通过 |
+| `volume-limit device set/remove/list` | 管理分设备上限 | 实机 smoke 通过 |
+| `volume-limit headphone-only on/off` | 切换耳机模式 | 实机 smoke 通过 |
 | daemon 未运行 | 显示启动提示并退出 69 | 实机 smoke 通过 |
 
 daemon 未运行时实际输出：

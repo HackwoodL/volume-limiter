@@ -46,8 +46,6 @@ public struct VolumeLimitCommandRunner {
                 return try handleSet(arguments: arguments)
             case "device":
                 return try handleDevice(arguments: arguments)
-            case "get":
-                return try handleGet(arguments: arguments)
             case "status":
                 return try handleStatus(arguments: arguments)
             case "on":
@@ -163,14 +161,6 @@ public struct VolumeLimitCommandRunner {
         return CommandOutput(stdout: lines.joined(separator: "\n").appending("\n"))
     }
 
-    private func handleGet(arguments: [String]) throws -> CommandOutput {
-        guard arguments.count == 1 else {
-            throw CLIError.usage("Expected: get")
-        }
-        let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.getStatus.rawValue))
-        return CommandOutput(stdout: try compactStatusText(response))
-    }
-
     private func handleStatus(arguments: [String]) throws -> CommandOutput {
         guard arguments.count == 1 else {
             throw CLIError.usage("Expected: status")
@@ -195,29 +185,20 @@ public struct VolumeLimitCommandRunner {
     }
 
     private func handleHeadphoneOnly(arguments: [String]) throws -> CommandOutput {
-        guard arguments.count == 2 else {
-            throw CLIError.usage("Expected: headphone-only <on|off|status>")
+        guard arguments.count == 2, arguments[1] == "on" || arguments[1] == "off" else {
+            throw CLIError.usage("Expected: headphone-only <on|off>")
         }
 
-        switch arguments[1] {
-        case "on", "off":
-            let enabled = arguments[1] == "on"
-            let response = try send(
-                IPCRequest(
-                    id: requestID(),
-                    cmd: IPCCommand.setHeadphoneOnly.rawValue,
-                    enabled: enabled
-                )
+        let enabled = arguments[1] == "on"
+        let response = try send(
+            IPCRequest(
+                id: requestID(),
+                cmd: IPCCommand.setHeadphoneOnly.rawValue,
+                enabled: enabled
             )
-            let state = try required(response.headphoneOnly, field: "headphoneOnly") ? "on" : "off"
-            return CommandOutput(stdout: "Headphone-only mode is \(state).\n")
-        case "status":
-            let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.getStatus.rawValue))
-            let state = try required(response.headphoneOnly, field: "headphoneOnly") ? "on" : "off"
-            return CommandOutput(stdout: "Headphone-only mode is \(state).\n")
-        default:
-            throw CLIError.usage("Expected: headphone-only <on|off|status>")
-        }
+        )
+        let state = try required(response.headphoneOnly, field: "headphoneOnly") ? "on" : "off"
+        return CommandOutput(stdout: "Headphone-only mode is \(state).\n")
     }
 
     private func send(_ request: IPCRequest) throws -> IPCResponse {
@@ -294,20 +275,6 @@ private func required<T>(_ value: T?, field: String) throws -> T {
     return value
 }
 
-private func compactStatusText(_ response: IPCResponse) throws -> String {
-    let currentVolume = response.currentVolume.map { "\($0)%" } ?? "unavailable"
-    let limit = try required(response.limit, field: "limit")
-    let scope = (response.deviceHasLimitOverride ?? false) ? "this device" : "default"
-    return """
-    Limit: \(limit)% (\(scope))
-    Current volume: \(currentVolume)
-    Device: \(try required(response.deviceName, field: "deviceName"))
-    Enabled: \(try onOff(required(response.enabled, field: "enabled")))
-    Headphone-only: \(try onOff(required(response.headphoneOnly, field: "headphoneOnly")))
-    """
-    .appending("\n")
-}
-
 private func fullStatusText(_ response: IPCResponse) throws -> String {
     let currentVolume = response.currentVolume.map { "\($0)%" } ?? "unavailable"
     let diagnostics = response.diagnostics ?? []
@@ -339,17 +306,14 @@ private func helpText(executableName: String) -> String {
     """
     Usage:
       \(executableName) set <0-100>            Set the default cap for all devices
+      \(executableName) on                     Turn the limiter on
+      \(executableName) off                    Turn the limiter off
+      \(executableName) status                 Show the full daemon status
       \(executableName) device on|off          Enable/disable per-device caps
       \(executableName) device list            List per-device caps and connected devices
       \(executableName) device set <uid> <n>   Cap a specific device by UID
       \(executableName) device remove <uid>    Remove a device's per-device cap
-      \(executableName) get
-      \(executableName) on
-      \(executableName) off
-      \(executableName) status
-      \(executableName) headphone-only on
-      \(executableName) headphone-only off
-      \(executableName) headphone-only status
+      \(executableName) headphone-only on|off  Only limit headphone-like outputs
       \(executableName) --help
 
     volume-limit is a thin client; volume-limiterd owns Core Audio and configuration.

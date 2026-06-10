@@ -51,17 +51,14 @@ build/checkout directory. Use `scripts/install-prefpane.sh` if you only want to 
 
 ```bash
 volume-limit set <0-100>            # set the default cap for all devices
-volume-limit get                    # print the current cap, volume, and device (compact)
-volume-limit status                 # print full daemon status and diagnostics
 volume-limit on                     # turn the limiter on
 volume-limit off                    # turn the limiter off
+volume-limit status                 # show the full daemon status and diagnostics
 volume-limit device on|off          # enable/disable per-device caps
 volume-limit device set <uid> <n>   # cap a specific device by UID
 volume-limit device remove <uid>    # remove a device's per-device cap
 volume-limit device list            # list per-device caps and connected devices
-volume-limit headphone-only on      # only limit headphone-like outputs
-volume-limit headphone-only off     # limit every output device
-volume-limit headphone-only status  # print whether headphone-only mode is on
+volume-limit headphone-only on|off  # only limit headphone-like outputs
 volume-limit --help                 # show usage
 ```
 
@@ -116,7 +113,7 @@ cp -R VolumeLimiter.prefPane ~/Library/PreferencePanes/
 open ~/Library/PreferencePanes/VolumeLimiter.prefPane
 ```
 
-Because the author is too broke to pay for an Apple Developer Program membership, releases are ad-hoc signed and not notarized. On first launch macOS may require right-click Open, `xattr -cr`, or approving the pane from System Settings.
+Because I can't afford an Apple Developer Program membership, releases are ad-hoc signed and not notarized. On first launch macOS may require right-click Open, `xattr -cr`, or approving the pane from System Settings.
 
 ## Uninstall
 
