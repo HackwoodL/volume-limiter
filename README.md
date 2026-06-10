@@ -170,9 +170,3 @@ Remaining follow-up validation: HDMI/AirPlay/aggregate/unsupported output device
 ## Preference pane status
 
 `NSPreferencePane` is deprecated. Volume Limiter keeps it as the preferred v1 GUI because it integrates with System Settings on current macOS versions, but future macOS releases may remove or further restrict third-party preference panes. If that becomes unreliable, the fallback is a SwiftUI menu bar app that still talks to the same daemon.
-
-## Roadmap
-
-- v0.1.x: finish release packaging, tap publication, and manual hardware validation.
-- v1.0: stable distribution for both the CLI and the prefPane GUI (Homebrew tap and GitHub Release).
-- v2: investigate driver-layer hard interception with a Core Audio HAL virtual device. v1 deliberately does not install drivers, kexts, or virtual audio devices.

@@ -154,9 +154,3 @@ brew uninstall --cask HackwoodL/tap/volume-limiter-gui
 ## prefPane 状态说明
 
 `NSPreferencePane` 已被 Apple 标记为 deprecated。Volume Limiter v1 仍优先使用它，因为它能在当前 macOS 上提供最接近“系统设置”的集成体验。如果未来 macOS 移除或进一步限制第三方 prefPane，fallback 方案是 SwiftUI 菜单栏 App，但仍保持同一个 daemon + IPC 瘦客户端架构。
-
-## Roadmap
-
-- v0.1.x：完成发布打包、tap 发布和剩余硬件验证。
-- v1.0：CLI 与 prefPane GUI 都有稳定的分发渠道（Homebrew tap 与 GitHub Release）。
-- v2：研究驱动层硬拦截，例如 Core Audio HAL 虚拟设备。v1 明确不安装驱动、kext 或虚拟音频设备。
