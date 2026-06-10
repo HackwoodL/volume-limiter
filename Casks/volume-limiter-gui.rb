@@ -1,15 +1,13 @@
 ####
 # Homebrew Cask for the GUI install.
 #
-# The url/sha256 point at the published v0.1.0 GitHub Release. The postflight
-# (install + start the LaunchAgent) and the uninstall/zap teardown have not yet
-# been verified end-to-end against a live tap — run `brew install --cask` once
-# before relying on it.
+# The url/sha256 point at the published v0.1.0 GitHub Release. Verified end to
+# end on macOS 26: `brew install --cask` installs the self-contained pane and
+# starts the LaunchAgent; `brew uninstall --cask` stops the service and removes
+# everything.
 #
-# Design: the cask carries the self-contained VolumeLimiter.prefPane (which
-# bundles volume-limiterd + volume-limit), so no separate formula is needed.
-# `brew install --cask` installs the pane and starts the per-user LaunchAgent in
-# one step; `brew uninstall --cask` stops the service and removes everything.
+# The cask carries the self-contained VolumeLimiter.prefPane (which bundles
+# volume-limiterd + volume-limit), so no separate formula is needed.
 ####
 cask "volume-limiter-gui" do
   version "0.1.0"
