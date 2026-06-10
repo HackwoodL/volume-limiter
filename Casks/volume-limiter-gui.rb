@@ -1,9 +1,10 @@
 ####
 # Homebrew Cask for the GUI install.
 #
-# DRAFT — pending tap publication. The version/sha256/url point at a GitHub
-# Release that doesn't exist yet, and the postflight/uninstall flow must be
-# verified end-to-end against the real tap before relying on it.
+# The url/sha256 point at the published v0.1.0 GitHub Release. The postflight
+# (install + start the LaunchAgent) and the uninstall/zap teardown have not yet
+# been verified end-to-end against a live tap — run `brew install --cask` once
+# before relying on it.
 #
 # Design: the cask carries the self-contained VolumeLimiter.prefPane (which
 # bundles volume-limiterd + volume-limit), so no separate formula is needed.
@@ -12,7 +13,7 @@
 ####
 cask "volume-limiter-gui" do
   version "0.1.0"
-  sha256 "REPLACE_WITH_DMG_SHA256"
+  sha256 "dc7c5cda8db7104fe695aa089574e2b813d7fa41a810f2f1af352e8952e865f4"
 
   url "https://github.com/HackwoodL/volume-limiter/releases/download/v#{version}/VolumeLimiter-#{version}.dmg"
   name "Volume Limiter"
