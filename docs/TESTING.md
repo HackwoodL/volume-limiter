@@ -13,6 +13,7 @@
 | daemon + CLI 实机 smoke | `scripts/test-cli-daemon.py` | daemon 启动，CLI 可用，重复 daemon 被拒绝 | 成功 |
 | prefPane 构建 | `scripts/build-prefpane.sh` | 生成 ad-hoc 签名 `.prefPane` | 成功 |
 | prefPane 安装 | `scripts/install-prefpane.sh` | 安装到 `~/Library/PreferencePanes` | 成功 |
+| Release 打包 | `scripts/build-release.sh 0.1.0` | 生成 CLI/daemon zip、GUI zip、SHA256SUMS | 成功 |
 
 `swift run volume-limiter-tests` 关键输出：
 
@@ -82,6 +83,14 @@ Start it with: brew services start volume-limiter
 | 未知/非法参数 | daemon 拒绝并返回错误 | 已实现 `unsupportedVersion`、`unknownCommand`、`missingArgument`、`invalidArgument` |
 | 重复 daemon | 当前用户会话只允许一个活动 socket server | 自检和实机 smoke 均通过 |
 | SIGPIPE | 对端提前关闭不能杀死 daemon | 已修复并通过冲突测试 |
+
+## 2.1 Release artifacts
+
+| 项目 | 命令 | 预期结果 | 实际结果 |
+| --- | --- | --- | --- |
+| CLI universal 架构 | `lipo -archs .build/release-artifacts/volume-limiter-cli-v0.1.0/volume-limit` | `x86_64 arm64` | `x86_64 arm64` |
+| daemon universal 架构 | `lipo -archs .build/release-artifacts/volume-limiter-cli-v0.1.0/volume-limiterd` | `x86_64 arm64` | `x86_64 arm64` |
+| CLI zip 内容 | `unzip -l .build/release-artifacts/volume-limiter-cli-v0.1.0.zip` | 只包含 `volume-limit` 和 `volume-limiterd` | 成功，不包含短别名 |
 
 ## 3. Core Audio 封顶逻辑
 

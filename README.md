@@ -87,7 +87,7 @@ The daemon is the only process that calls Core Audio to read or set output volum
 
 Download the release zips from GitHub:
 
-- `volume-limiter-cli-v0.1.0.zip`: `volume-limiterd`, `volume-limit`
+- `volume-limiter-cli-v0.1.0.zip`: universal `arm64`/`x86_64` `volume-limiterd` and `volume-limit`
 - `VolumeLimiter-gui-v0.1.0.zip`: `VolumeLimiter.prefPane`
 - `SHA256SUMS`
 
