@@ -154,6 +154,7 @@ Start it with: brew services start volume-limiter
 | 系统设置视觉确认 | 人工检查 System Settings 面板 | 面板显示完整控件，无底部裁切 | 成功；首次发现 `Diagnostics` 底部裁切，已通过加高主视图和压缩间距修复 |
 | 系统设置截图 | `screencapture -x docs/screenshots/prefpane-system-settings.png` | 保存真实截图 | 成功，路径见下方 |
 | 简体中文 GUI | `AppleLanguages=("zh-Hans")` 加载 prefPane 并遍历 label/button 文案 | 显示简体中文控件 | 成功，包含“上限”“当前音量”“仅限制蓝牙输出设备”等文案 |
+| GUI 自动刷新 | prefPane 可见时每 1 秒刷新一次 IPC status，离开面板后停止 timer | 不需要手动点 Refresh 才能看到状态变化 | 已实现；timer 只在面板可见期间运行 |
 
 截图：
 

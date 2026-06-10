@@ -6,6 +6,7 @@ import PreferencePanes
 public final class VolumeLimiterPreferencePane: NSPreferencePane {
     private let client = UnixSocketClient()
     private var isUpdatingControls = false
+    private var refreshTimer: Timer?
 
     private var limitLabel = NSTextField(labelWithString: localized("limit.placeholder"))
     private var currentVolumeLabel = NSTextField(labelWithString: localized("currentVolume.unavailable"))
@@ -115,12 +116,23 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
 
         mainView = rootView
         refreshStatus()
+        startAutoRefresh()
         return rootView
     }
 
     public override func didSelect() {
         super.didSelect()
         refreshStatus()
+        startAutoRefresh()
+    }
+
+    public override func didUnselect() {
+        super.didUnselect()
+        stopAutoRefresh()
+    }
+
+    deinit {
+        stopAutoRefresh()
     }
 
     @objc private func limitSliderChanged(_ sender: NSSlider) {
@@ -206,6 +218,23 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         } catch {
             showDaemonError(error)
         }
+    }
+
+    private func startAutoRefresh() {
+        guard refreshTimer == nil else {
+            return
+        }
+
+        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.refreshStatus()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        refreshTimer = timer
+    }
+
+    private func stopAutoRefresh() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
     }
 
     private func send(_ request: IPCRequest) throws -> IPCResponse {
