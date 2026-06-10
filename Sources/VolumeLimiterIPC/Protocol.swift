@@ -108,6 +108,7 @@ public enum IPCProtocolError: Error, LocalizedError, Equatable {
     case unsupportedVersion(Int)
     case unknownCommand(String)
     case missingArgument(String)
+    case invalidArgument(String)
     case invalidRequest(String)
 
     public var errorDescription: String? {
@@ -118,6 +119,8 @@ public enum IPCProtocolError: Error, LocalizedError, Equatable {
             "Unknown IPC command '\(command)'."
         case let .missingArgument(argument):
             "Missing required argument '\(argument)'."
+        case let .invalidArgument(message):
+            "Invalid argument: \(message)"
         case let .invalidRequest(message):
             "Invalid IPC request: \(message)"
         }

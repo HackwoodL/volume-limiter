@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import VolumeLimitCLI
 import VolumeLimiterCore
 import VolumeLimiterIPC
 
@@ -17,6 +18,10 @@ struct VolumeLimiterTestRunner {
         try suite.run("IPC request/response Codable round trip", testRequestAndResponseCodableRoundTrip)
         try suite.run("IPC Unix socket handles newline JSON", testUnixSocketServerHandlesOneLineJSONRequests)
         try suite.run("IPC server returns structured error for invalid JSON", testServerRejectsInvalidJSON)
+        try suite.run("CLI set sends setLimit request", testCLISetSendsSetLimitRequest)
+        try suite.run("CLI get renders compact daemon status", testCLIGetRendersCompactStatus)
+        try suite.run("CLI rejects invalid limit locally", testCLIRejectsInvalidLimit)
+        try suite.run("CLI maps daemon connection failure", testCLIMapsDaemonConnectionFailure)
 
         print("All \(suite.passed) Volume Limiter tests passed.")
     }
@@ -217,6 +222,71 @@ private func testServerRejectsInvalidJSON() throws {
     try expectEqual(response.error?.code, "invalidRequest")
 }
 
+private func testCLISetSendsSetLimitRequest() throws {
+    let client = FakeCLIClient(
+        responses: [
+            IPCResponse(ok: true, id: "fixed-id", enabled: true, limit: 30)
+        ]
+    )
+    let runner = VolumeLimitCommandRunner(client: client, requestID: { "fixed-id" })
+
+    let output = runner.run(arguments: ["set", "30"])
+
+    try expectEqual(output.exitCode, 0)
+    try expectEqual(output.stdout, "Limit set to 30%.\n")
+    try expectEqual(client.requests, [
+        IPCRequest(id: "fixed-id", cmd: IPCCommand.setLimit.rawValue, value: 30)
+    ])
+}
+
+private func testCLIGetRendersCompactStatus() throws {
+    let client = FakeCLIClient(
+        responses: [
+            IPCResponse(
+                ok: true,
+                id: "fixed-id",
+                enabled: true,
+                limit: 45,
+                currentVolume: 12,
+                deviceName: "Fake Speakers",
+                bluetoothOnly: false
+            )
+        ]
+    )
+    let runner = VolumeLimitCommandRunner(client: client, requestID: { "fixed-id" })
+
+    let output = runner.run(arguments: ["get"])
+
+    try expectEqual(output.exitCode, 0)
+    try expectTrue(output.stdout.contains("Limit: 45%"), "Limit line")
+    try expectTrue(output.stdout.contains("Current volume: 12%"), "Current volume line")
+    try expectTrue(output.stdout.contains("Device: Fake Speakers"), "Device line")
+    try expectEqual(client.requests, [
+        IPCRequest(id: "fixed-id", cmd: IPCCommand.getStatus.rawValue)
+    ])
+}
+
+private func testCLIRejectsInvalidLimit() throws {
+    let client = FakeCLIClient(responses: [])
+    let runner = VolumeLimitCommandRunner(client: client, requestID: { "fixed-id" })
+
+    let output = runner.run(arguments: ["set", "101"])
+
+    try expectEqual(output.exitCode, 64)
+    try expectTrue(output.stderr.contains("Volume limit must be an integer in 0...100."), "invalid limit message")
+    try expectEqual(client.requests, [])
+}
+
+private func testCLIMapsDaemonConnectionFailure() throws {
+    let client = FakeCLIClient(error: UnixSocketError.systemCall("connect", ENOENT))
+    let runner = VolumeLimitCommandRunner(client: client, requestID: { "fixed-id" })
+
+    let output = runner.run(arguments: ["status"])
+
+    try expectEqual(output.exitCode, 69)
+    try expectTrue(output.stderr.contains("volume-limiterd is not running."), "daemon unavailable message")
+}
+
 private func makeEngine(
     audio: FakeAudioHardware,
     config: VolumeLimiterConfig
@@ -276,6 +346,32 @@ private final class FakeAudioHardware: AudioHardwareControlling {
     func emitVolumeChange(volume: Int) {
         self.volume = volume
         volumeChanged?(deviceID)
+    }
+}
+
+private final class FakeCLIClient: VolumeLimiterClientSending {
+    private var responses: [IPCResponse]
+    private let error: Error?
+    private(set) var requests: [IPCRequest] = []
+
+    init(responses: [IPCResponse], error: Error? = nil) {
+        self.responses = responses
+        self.error = error
+    }
+
+    convenience init(error: Error) {
+        self.init(responses: [], error: error)
+    }
+
+    func send(_ request: IPCRequest) throws -> IPCResponse {
+        requests.append(request)
+        if let error {
+            throw error
+        }
+        guard !responses.isEmpty else {
+            return IPCResponse.failure(id: request.id, code: "testFailure", message: "missing fake response")
+        }
+        return responses.removeFirst()
     }
 }
 

@@ -73,6 +73,9 @@ private func handle(request: IPCRequest, engine: VolumeLimiterEngine) -> IPCResp
             guard let value = request.value else {
                 return missingArgumentResponse(id: request.id, argument: "value")
             }
+            guard (0...100).contains(value) else {
+                return invalidArgumentResponse(id: request.id, message: "value must be an integer in 0...100")
+            }
             return response(id: request.id, status: try engine.setLimit(value))
         case .setEnabled:
             guard let enabled = request.enabled else {
@@ -116,5 +119,13 @@ private func missingArgumentResponse(id: String, argument: String) -> IPCRespons
         id: id,
         code: "missingArgument",
         message: IPCProtocolError.missingArgument(argument).localizedDescription
+    )
+}
+
+private func invalidArgumentResponse(id: String, message: String) -> IPCResponse {
+    .failure(
+        id: id,
+        code: "invalidArgument",
+        message: IPCProtocolError.invalidArgument(message).localizedDescription
     )
 }

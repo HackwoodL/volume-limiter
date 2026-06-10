@@ -10,12 +10,19 @@ let package = Package(
     products: [
         .library(name: "VolumeLimiterCore", targets: ["VolumeLimiterCore"]),
         .library(name: "VolumeLimiterIPC", targets: ["VolumeLimiterIPC"]),
+        .library(name: "VolumeLimitCLI", targets: ["VolumeLimitCLI"]),
         .executable(name: "volume-limiterd", targets: ["VolumeLimiterDaemon"]),
+        .executable(name: "volume-limit", targets: ["VolumeLimitExecutable"]),
+        .executable(name: "vollimit", targets: ["VolLimitExecutable"]),
         .executable(name: "volume-limiter-tests", targets: ["VolumeLimiterTestRunner"])
     ],
     targets: [
         .target(name: "VolumeLimiterCore"),
         .target(name: "VolumeLimiterIPC"),
+        .target(
+            name: "VolumeLimitCLI",
+            dependencies: ["VolumeLimiterIPC"]
+        ),
         .executableTarget(
             name: "VolumeLimiterDaemon",
             dependencies: [
@@ -25,9 +32,20 @@ let package = Package(
             path: "Sources/volume-limiterd"
         ),
         .executableTarget(
+            name: "VolumeLimitExecutable",
+            dependencies: ["VolumeLimitCLI"],
+            path: "Sources/volume-limit"
+        ),
+        .executableTarget(
+            name: "VolLimitExecutable",
+            dependencies: ["VolumeLimitCLI"],
+            path: "Sources/vollimit"
+        ),
+        .executableTarget(
             name: "VolumeLimiterTestRunner",
             dependencies: [
                 "VolumeLimiterCore",
+                "VolumeLimitCLI",
                 "VolumeLimiterIPC"
             ],
             path: "Tests/VolumeLimiterTestRunner"
