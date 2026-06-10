@@ -14,7 +14,6 @@ swift build -c release --package-path "$ROOT"
 
 cp "$ROOT/.build/release/volume-limiterd" "$CLI_DIR/"
 cp "$ROOT/.build/release/volume-limit" "$CLI_DIR/"
-ln -s volume-limit "$CLI_DIR/vollimit"
 "$ROOT/scripts/sign.sh" "$CLI_DIR/volume-limiterd" "$CLI_DIR/volume-limit"
 
 PREFPANE="$("$ROOT/scripts/build-prefpane.sh")"

@@ -64,12 +64,6 @@ $ volume-limit on
 Volume limiting is on.
 $ volume-limit bluetooth-only status
 Bluetooth-only mode is off.
-$ vollimit get
-Limit: 100%
-Current volume: 0%
-Device: MacBook Air扬声器
-Enabled: on
-Bluetooth-only: off
 $ volume-limiterd # duplicate
 volume-limiterd: failed to start: bind failed: Address already in use
 $ volume-limit status # daemon stopped
@@ -116,7 +110,6 @@ Start it with: brew services start volume-limiter
 | `volume-limit on/off` | 启停封顶 | 实机 smoke 通过 |
 | `volume-limit status` | 显示 daemon 和设备状态 | 实机 smoke 通过 |
 | `volume-limit bluetooth-only status` | 显示蓝牙模式 | 实机 smoke 通过 |
-| `vollimit get` | 与 `volume-limit get` 行为一致 | 实机 smoke 通过 |
 | daemon 未运行 | 显示启动提示并退出 69 | 实机 smoke 通过 |
 
 daemon 未运行时实际输出：

@@ -10,7 +10,7 @@ Volume Limiter is a lightweight macOS maximum-volume limiter. A single per-user 
 
 - Event-driven Core Audio monitoring; no default polling loop.
 - Per-user daemon: `volume-limiterd`.
-- CLI: `volume-limit`, plus `vollimit` alias.
+- CLI: `volume-limit`.
 - GUI: ad-hoc signed `VolumeLimiter.prefPane` for macOS System Settings.
 - Shared config owned by the daemon.
 - Optional Bluetooth-only mode.
@@ -76,7 +76,7 @@ Start it with: brew services start volume-limiter
                  ┌────────────┴────────────┐
                  │                         │
 ┌────────────────────────────┐ ┌────────────────────────────┐
-│ volume-limit / vollimit     │ │ VolumeLimiter.prefPane     │
+│ volume-limit                │ │ VolumeLimiter.prefPane     │
 │ CLI thin client             │ │ System Settings thin client│
 └────────────────────────────┘ └────────────────────────────┘
 ```
@@ -87,14 +87,14 @@ The daemon is the only process that calls Core Audio to read or set output volum
 
 Download the release zips from GitHub:
 
-- `volume-limiter-cli-v0.1.0.zip`: `volume-limiterd`, `volume-limit`, `vollimit`
+- `volume-limiter-cli-v0.1.0.zip`: `volume-limiterd`, `volume-limit`
 - `VolumeLimiter-gui-v0.1.0.zip`: `VolumeLimiter.prefPane`
 - `SHA256SUMS`
 
 Remove quarantine for unsigned/ad-hoc-signed downloads:
 
 ```bash
-xattr -cr VolumeLimiter.prefPane volume-limiterd volume-limit vollimit
+xattr -cr VolumeLimiter.prefPane volume-limiterd volume-limit
 ```
 
 Install the prefPane manually:

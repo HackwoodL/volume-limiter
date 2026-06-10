@@ -13,7 +13,6 @@ let package = Package(
         .library(name: "VolumeLimitCLI", targets: ["VolumeLimitCLI"]),
         .executable(name: "volume-limiterd", targets: ["VolumeLimiterDaemon"]),
         .executable(name: "volume-limit", targets: ["VolumeLimitExecutable"]),
-        .executable(name: "vollimit", targets: ["VolLimitExecutable"]),
         .executable(name: "volume-limiter-tests", targets: ["VolumeLimiterTestRunner"])
     ],
     targets: [
@@ -35,11 +34,6 @@ let package = Package(
             name: "VolumeLimitExecutable",
             dependencies: ["VolumeLimitCLI"],
             path: "Sources/volume-limit"
-        ),
-        .executableTarget(
-            name: "VolLimitExecutable",
-            dependencies: ["VolumeLimitCLI"],
-            path: "Sources/vollimit"
         ),
         .executableTarget(
             name: "VolumeLimiterTestRunner",

@@ -9,7 +9,7 @@ Volume Limiter follows a single-daemon, thin-client architecture.
 | `volume-limiterd` | Owns config, listens to output-device and volume events, clamps volume, serves IPC | Yes |
 | `VolumeLimiterCore` | Core Audio abstraction, config store, limiter engine | Yes, through adapter |
 | `VolumeLimiterIPC` | Newline-delimited JSON protocol and Unix socket client/server | No |
-| `volume-limit` / `vollimit` | CLI thin clients | No |
+| `volume-limit` | CLI thin client | No |
 | `VolumeLimiter.prefPane` | System Settings GUI thin client | No |
 
 ## Data flow
@@ -17,7 +17,7 @@ Volume Limiter follows a single-daemon, thin-client architecture.
 ```text
 User action
   │
-  ├─ volume-limit / vollimit ─┐
+  ├─ volume-limit ────────────┐
   └─ VolumeLimiter.prefPane ──┼─ JSON line over /tmp/volume-limiter-$UID.sock
                               │
                               ▼

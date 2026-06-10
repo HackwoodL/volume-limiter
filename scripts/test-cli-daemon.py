@@ -29,7 +29,6 @@ def main() -> int:
 
     daemon = repo / ".build" / "debug" / "volume-limiterd"
     cli = repo / ".build" / "debug" / "volume-limit"
-    alias = repo / ".build" / "debug" / "vollimit"
     proc = subprocess.Popen(
         [str(daemon)],
         cwd=repo,
@@ -46,7 +45,6 @@ def main() -> int:
         run_cli(cli, ["off"])
         run_cli(cli, ["on"])
         run_cli(cli, ["bluetooth-only", "status"])
-        run_cli(alias, ["get"], display_name="vollimit")
 
         second = subprocess.run(
             [str(daemon)],

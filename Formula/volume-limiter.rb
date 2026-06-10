@@ -11,7 +11,6 @@ class VolumeLimiter < Formula
     system "swift", "build", "-c", "release", "--disable-sandbox"
     bin.install ".build/release/volume-limiterd"
     bin.install ".build/release/volume-limit"
-    bin.install_symlink "volume-limit" => "vollimit"
   end
 
   service do
