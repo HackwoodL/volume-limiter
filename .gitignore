@@ -1,0 +1,10 @@
+.DS_Store
+.build/
+.swiftpm/
+DerivedData/
+xcuserdata/
+*.xcodeproj
+*.xcworkspace
+
+# Local prompt/specification supplied outside the source distribution.
+prompt.md
