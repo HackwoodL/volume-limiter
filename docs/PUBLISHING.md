@@ -17,6 +17,7 @@ If Homebrew reports that Command Line Tools are outdated, update them from Syste
 swift build
 swift run volume-limiter-tests
 scripts/test-cli-daemon.py
+scripts/test-launch-agent.sh
 scripts/build-prefpane.sh
 scripts/build-release.sh 0.1.0
 ```

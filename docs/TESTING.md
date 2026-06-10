@@ -14,6 +14,7 @@
 | prefPane 构建 | `scripts/build-prefpane.sh` | 生成 ad-hoc 签名 `.prefPane` | 成功 |
 | prefPane 安装 | `scripts/install-prefpane.sh` | 安装到 `~/Library/PreferencePanes` | 成功 |
 | Release 打包 | `scripts/build-release.sh 0.1.0` | 生成 CLI/daemon zip、GUI zip、SHA256SUMS | 成功 |
+| LaunchAgent bootstrap | `scripts/test-launch-agent.sh` | `launchctl bootstrap` 后 daemon 响应 status，并清理 plist/socket | 成功 |
 | 本地 Homebrew Formula 模拟安装 | 临时 tap + 本地 tarball + `brew install` | 安装并启动 service | 阻塞：Homebrew 要求更新 Command Line Tools 到 Xcode 26.3 |
 
 `swift run volume-limiter-tests` 关键输出：
@@ -194,7 +195,7 @@ ps -o pid=,%cpu=,rss=,comm= -p <pid>
 
 | 项目 | 当前状态 | 后续验证方式 |
 | --- | --- | --- |
-| LaunchAgent 开机自启 | prefPane 已实现同 label 的开关；未重启验证 | 安装 formula 后启用开关，重启，再运行 `volume-limit status` |
+| LaunchAgent 开机自启 | `launchctl bootstrap` 本地测试通过；未重启验证 | 安装 formula 后启用开关，重启，再运行 `volume-limit status` |
 | 只装 CLI | Formula 已准备；本地临时 tap 安装已尝试但被 Homebrew 拦截 | 更新 Command Line Tools 到 Xcode 26.3 后重试，或发布 tag/release 后 `brew install HackwoodL/tap/volume-limiter` |
 | 只装 GUI 自动带 daemon | Cask 已准备；GUI zip SHA 尚未发布替换；依赖 Formula 安装 | Formula 可安装后再执行 `brew install --cask HackwoodL/tap/volume-limiter-gui` |
 | 分别卸载与 zap | 需要真实 tap 安装成功后验证 | 发布后执行 uninstall/zap 流程 |
