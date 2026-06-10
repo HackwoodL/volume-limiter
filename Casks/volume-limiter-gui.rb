@@ -52,12 +52,23 @@ cask "volume-limiter-gui" do
       </plist>
     PLIST
 
-    system_command "/bin/launchctl",
-                   args: ["bootout", "gui/#{Process.uid}", plist],
-                   sudo: false, must_succeed: false
-    system_command "/bin/launchctl",
-                   args: ["bootstrap", "gui/#{Process.uid}", plist],
-                   sudo: false, must_succeed: false
+    # Start the LaunchAgent. Boot out any stale instance quietly, then retry
+    # bootstrap a few times — launchctl can briefly return EIO after a bootout.
+    start_script = <<~SH
+      target="gui/#{Process.uid}"
+      plist="#{plist}"
+      label="#{label}"
+      /bin/launchctl bootout "$target/$label" 2>/dev/null || true
+      for _ in 1 2 3 4 5; do
+        if /bin/launchctl bootstrap "$target" "$plist" 2>/dev/null; then
+          exit 0
+        fi
+        /bin/launchctl bootout "$target/$label" 2>/dev/null || true
+        sleep 1
+      done
+      /bin/launchctl bootstrap "$target" "$plist"
+    SH
+    system_command "/bin/sh", args: ["-c", start_script], sudo: false
   end
 
   uninstall launchctl: "com.hackwoodl.volumelimiter",
