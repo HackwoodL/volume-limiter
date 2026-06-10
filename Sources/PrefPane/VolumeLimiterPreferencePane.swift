@@ -225,7 +225,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             return
         }
 
-        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in
             self?.refreshStatus()
         }
         RunLoop.main.add(timer, forMode: .common)
