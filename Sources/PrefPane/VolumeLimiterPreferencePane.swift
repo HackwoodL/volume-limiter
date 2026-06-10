@@ -961,6 +961,16 @@ private enum LaunchAgentManager {
             .appendingPathComponent("\(label).plist")
     }
 
+    static var installedDaemonPath: String {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library", isDirectory: true)
+            .appendingPathComponent("Application Support", isDirectory: true)
+            .appendingPathComponent("VolumeLimiter", isDirectory: true)
+            .appendingPathComponent("bin", isDirectory: true)
+            .appendingPathComponent("volume-limiterd")
+            .path
+    }
+
     private static func resolvedDaemonPath() -> String? {
         let bundleSibling = Bundle(for: VolumeLimiterPreferencePane.self).bundleURL
             .deletingLastPathComponent()
@@ -968,6 +978,7 @@ private enum LaunchAgentManager {
             .appendingPathComponent("bin/volume-limiterd")
             .path
         let candidates = [
+            installedDaemonPath,
             bundleSibling,
             "/opt/homebrew/bin/volume-limiterd",
             "/usr/local/bin/volume-limiterd",

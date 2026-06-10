@@ -40,8 +40,12 @@ brew install --cask HackwoodL/tap/volume-limiter-gui
 swift build
 swift run volume-limiter-tests
 scripts/test-cli-daemon.py
-scripts/install-prefpane.sh
+scripts/install-local.sh    # 守护进程 + CLI + prefPane 安装到 ~/Library，并由 launchd 启动
 ```
+
+`install-local.sh` 会把所有东西放在 App 专属的 `~/Library/Application Support/VolumeLimiter`
+（以及 `~/Library` 下的 LaunchAgent 和 prefPane），不会从构建/源码目录里运行任何东西。
+若只想更新 GUI，可单独用 `scripts/install-prefpane.sh`。
 
 ## CLI
 

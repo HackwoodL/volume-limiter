@@ -40,8 +40,12 @@ Manual local build:
 swift build
 swift run volume-limiter-tests
 scripts/test-cli-daemon.py
-scripts/install-prefpane.sh
+scripts/install-local.sh    # daemon + CLI + prefPane under ~/Library, started via launchd
 ```
+
+`install-local.sh` keeps everything in the app's own `~/Library/Application Support/VolumeLimiter`
+(plus the LaunchAgent and prefPane under `~/Library`), so nothing runs out of your
+build/checkout directory. Use `scripts/install-prefpane.sh` if you only want to refresh the GUI.
 
 ## CLI
 
