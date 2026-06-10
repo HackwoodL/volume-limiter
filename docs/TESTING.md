@@ -114,7 +114,7 @@ Start it with: brew services start volume-limiter
 
 | 项目 | 未执行原因 | 手动验证命令/步骤 |
 | --- | --- | --- |
-| HDMI/AirPlay/aggregate device 或不支持系统音量控制设备 | 需要对应外设 | 切换输出设备后运行 `volume-limit status` 查看 diagnostics |
+| HDMI/AirPlay/aggregate device 或不支持系统音量控制设备 | 当前没有对应外设可测；未伪造结果 | 后续有设备时切换输出后运行 `volume-limit status` 查看 diagnostics |
 
 ## 4. CLI 前端
 
@@ -228,4 +228,4 @@ Diagnostics: none
 
 已完成并真实验证：Core/IPC/CLI 自动化测试、真实 daemon + CLI smoke、单实例冲突、prefPane 构建/签名/安装/Bundle 加载、System Settings 视觉确认和截图、键盘音量键 `<100ms` 回压延迟、蓝牙重连、Type-C 有线耳机、重启自启、基础资源占用采样。
 
-尚需人工或后续阶段验证：HDMI/AirPlay/聚合设备/不支持音量控制设备、Homebrew 分装与卸载（当前本机被 Command Line Tools 版本阻塞）。
+尚需后续阶段验证：HDMI/AirPlay/聚合设备/不支持音量控制设备（当前没有对应外设）、Homebrew 分装与卸载（当前本机被 Command Line Tools 版本阻塞）。
