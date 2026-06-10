@@ -16,7 +16,8 @@
 "launchAtLogin.checkbox" = "登录时启动守护进程";
 "notifyOnLimit.checkbox" = "音量被限制时通知";
 "launchAgent.error" = "LaunchAgent 错误：%@";
-"daemon.startCommand" = "启动命令：brew services start volume-limiter";
+"daemon.startHint" = "Volume Limiter 需要后台服务运行才能限制音量。";
+"start.button" = "启动";
 "daemon.unknownError" = "守护进程返回未知错误";
 "daemon.executableNotFound" = "未在 /opt/homebrew/bin、/usr/local/bin 或此偏好设置面板旁找到 volume-limiterd。";
 "diagnostics.value" = "诊断：%@";

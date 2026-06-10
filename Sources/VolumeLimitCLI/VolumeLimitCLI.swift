@@ -268,7 +268,7 @@ private enum CLIError: Error {
             return CommandOutput(
                 stderr: """
                 volume-limiterd is not running.
-                Start it with: brew services start volume-limiter
+                Start it from System Settings > Volume Limiter, or with Homebrew: brew services start volume-limiter
                 """.appending("\n"),
                 exitCode: 69
             )

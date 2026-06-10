@@ -16,7 +16,8 @@
 "launchAtLogin.checkbox" = "Start daemon at login";
 "notifyOnLimit.checkbox" = "Notify when volume is limited";
 "launchAgent.error" = "LaunchAgent error: %@";
-"daemon.startCommand" = "Start it with: brew services start volume-limiter";
+"daemon.startHint" = "Volume Limiter needs its background service running to cap the volume.";
+"start.button" = "Start";
 "daemon.unknownError" = "daemon returned an unknown error";
 "daemon.executableNotFound" = "volume-limiterd was not found in /opt/homebrew/bin, /usr/local/bin, or next to this preference pane.";
 "diagnostics.value" = "Diagnostics: %@";

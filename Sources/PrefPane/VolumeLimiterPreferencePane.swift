@@ -22,6 +22,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     private let deviceValueLabel = NSTextField(labelWithString: localized("value.unavailable"))
     private let warningTitleLabel = NSTextField(labelWithString: "")
     private let warningDetailLabel = NSTextField(labelWithString: "")
+    private let warningActionButton = NSButton(title: "", target: nil, action: nil)
 
     private let addDevicePopup = NSPopUpButton(frame: .zero, pullsDown: true)
     private let deviceEnableSwitch = NSSwitch()
@@ -164,11 +165,32 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     }
 
     @objc private func launchAtLoginChanged(_ sender: NSSwitch) {
-        do {
-            try LaunchAgentManager.setEnabled(sender.state == .on)
-        } catch {
-            sender.state = LaunchAgentManager.isEnabled ? .on : .off
-            presentError(localizedFormat("launchAgent.error", error.localizedDescription))
+        setLaunchAgentEnabled(sender.state == .on, control: sender)
+    }
+
+    @objc private func startDaemonPressed(_ sender: NSButton) {
+        setLaunchAgentEnabled(true, control: sender)
+    }
+
+    private func setLaunchAgentEnabled(_ enabled: Bool, control: NSControl) {
+        control.isEnabled = false
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            var failure: Error?
+            do {
+                try LaunchAgentManager.setEnabled(enabled)
+            } catch {
+                failure = error
+            }
+            DispatchQueue.main.async {
+                control.isEnabled = true
+                if let failure {
+                    if let launchSwitch = control as? NSSwitch {
+                        launchSwitch.state = LaunchAgentManager.isEnabled ? .on : .off
+                    }
+                    self?.presentError(localizedFormat("launchAgent.error", failure.localizedDescription))
+                }
+                self?.refreshStatus()
+            }
         }
     }
 
@@ -385,15 +407,18 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
 
         if !daemonAvailable {
             warningTitleLabel.stringValue = localized("warning.daemonNotRunning")
-            warningDetailLabel.stringValue = localized("daemon.startCommand")
+            warningDetailLabel.stringValue = localized("daemon.startHint")
+            warningActionButton.isHidden = false
             setHidden(warningCard, false)
         } else if limiterEnabled, !volumeControlAvailable {
             warningTitleLabel.stringValue = localized("warning.volumeControlUnavailable")
             warningDetailLabel.stringValue = diagnostics.isEmpty
                 ? ""
                 : localizedFormat("diagnostics.value", diagnostics.joined(separator: " | "))
+            warningActionButton.isHidden = true
             setHidden(warningCard, false)
         } else {
+            warningActionButton.isHidden = true
             setHidden(warningCard, true)
         }
         warningDetailLabel.isHidden = warningDetailLabel.stringValue.isEmpty
@@ -453,6 +478,13 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         warningDetailLabel.isSelectable = true
         warningDetailLabel.lineBreakMode = .byWordWrapping
         warningDetailLabel.maximumNumberOfLines = 3
+
+        warningActionButton.title = localized("start.button")
+        warningActionButton.bezelStyle = .rounded
+        warningActionButton.target = self
+        warningActionButton.action = #selector(startDaemonPressed(_:))
+        warningActionButton.isHidden = true
+        warningActionButton.setContentHuggingPriority(.required, for: .horizontal)
     }
 
     private func makeHeaderCard() -> CardView {
@@ -725,9 +757,9 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         textStack.setContentHuggingPriority(.defaultLow, for: .horizontal)
         textStack.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        let row = NSStackView(views: [icon, textStack])
+        let row = NSStackView(views: [icon, textStack, flexibleSpacer(), warningActionButton])
         row.orientation = .horizontal
-        row.alignment = .top
+        row.alignment = .centerY
         row.distribution = .fill
         row.spacing = 10
         row.translatesAutoresizingMaskIntoConstraints = false
@@ -943,8 +975,26 @@ private enum LaunchAgentManager {
             withIntermediateDirectories: true
         )
         try launchAgentPlist(daemonPath: daemonPath).write(to: plistURL, atomically: true, encoding: .utf8)
-        try runLaunchctl(["bootstrap", "gui/\(getuid())", plistURL.path])
-        try runLaunchctl(["enable", "gui/\(getuid())/\(label)"])
+
+        // Make (re)starting idempotent: a previous instance may still be loaded,
+        // and `bootstrap` can briefly return EIO right after a `bootout`.
+        try? runLaunchctl(["bootout", "gui/\(getuid())", plistURL.path])
+        var lastError: Error?
+        for _ in 0..<5 {
+            do {
+                try runLaunchctl(["bootstrap", "gui/\(getuid())", plistURL.path])
+                lastError = nil
+                break
+            } catch {
+                lastError = error
+                try? runLaunchctl(["bootout", "gui/\(getuid())", plistURL.path])
+                Thread.sleep(forTimeInterval: 0.4)
+            }
+        }
+        if let lastError {
+            throw lastError
+        }
+        try? runLaunchctl(["enable", "gui/\(getuid())/\(label)"])
     }
 
     private static func uninstall() throws {
