@@ -1,6 +1,7 @@
 # Publishing checklist
 
-Replace repository and tap names if you choose different GitHub names.
+Replace repository and tap names if you choose different GitHub names. Publishing
+is not done yet — this is the plan for when you are ready.
 
 ## One-time GitHub setup
 
@@ -11,16 +12,17 @@ gh repo create HackwoodL/homebrew-tap --public
 
 ## Validate locally
 
-If Homebrew reports that Command Line Tools are outdated, update them from System Settings or install the CLT version requested by Homebrew before validating Formula/Cask installation.
-
 ```bash
 swift build
 swift run volume-limiter-tests
 scripts/test-cli-daemon.py
 scripts/test-launch-agent.sh
-scripts/build-prefpane.sh
-scripts/build-release.sh 0.1.0
+scripts/build-dmg.sh 0.1.0        # -> .build/dmg/VolumeLimiter-0.1.0.dmg
 ```
+
+Then install the built DMG and confirm the full flow: double-click the pane, let
+System Settings install it, verify the service starts on its own, and check that
+the in-pane **Uninstall** button removes everything.
 
 ## Publish v0.1.0
 
@@ -31,49 +33,48 @@ git push origin main
 git push origin v0.1.0
 ```
 
-The release workflow builds:
+Attach `VolumeLimiter-0.1.0.dmg` to the GitHub Release — the cask downloads it.
+(GitHub also generates a source tarball automatically, which the optional
+CLI-only formula builds from.)
 
-- `volume-limiter-cli-v0.1.0.zip`
-- `VolumeLimiter-gui-v0.1.0.zip`
-- `SHA256SUMS`
+> The cask points at `VolumeLimiter-<version>.dmg`. If you automate the release,
+> make sure the workflow builds and uploads that DMG with `scripts/build-dmg.sh`
+> (the current `release.yml` predates the DMG and only builds the zips).
 
-## Update Homebrew tap
+## Update the Homebrew tap
 
-After GitHub Release assets exist, compute or copy the SHA256 values from `SHA256SUMS`, then update:
+The cask is self-contained: the pane bundles `volume-limiterd` and `volume-limit`
+and starts the service itself, so it does **not** depend on the formula. After the
+release exists:
 
-- `Formula/volume-limiter.rb`
-- `Casks/volume-limiter-gui.rb`
-
-Copy them to the tap:
+1. Put the DMG's SHA256 into `sha256` and the release URL into `url` in
+   `Casks/volume-limiter-gui.rb`.
+2. (Optional) Update `Formula/volume-limiter.rb` only if you also want a
+   CLI-only `brew install volume-limiter` for headless users.
 
 ```bash
 git clone git@github.com:HackwoodL/homebrew-tap.git ../homebrew-tap
-mkdir -p ../homebrew-tap/Formula ../homebrew-tap/Casks
-cp Formula/volume-limiter.rb ../homebrew-tap/Formula/
+mkdir -p ../homebrew-tap/Casks ../homebrew-tap/Formula
 cp Casks/volume-limiter-gui.rb ../homebrew-tap/Casks/
+cp Formula/volume-limiter.rb  ../homebrew-tap/Formula/   # optional, CLI-only
 cd ../homebrew-tap
-git add Formula/volume-limiter.rb Casks/volume-limiter-gui.rb
-git commit -m "Add Volume Limiter formula and cask"
+git add Casks/volume-limiter-gui.rb Formula/volume-limiter.rb
+git commit -m "Add Volume Limiter cask"
 git push origin main
 ```
 
-## Test tap install
+## Test the tap
+
+One command installs **and** starts everything:
 
 ```bash
-brew install HackwoodL/tap/volume-limiter
-brew services start volume-limiter
-volume-limit status
 brew install --cask HackwoodL/tap/volume-limiter-gui
-open ~/Library/PreferencePanes/VolumeLimiter.prefPane
+volume-limit status
 ```
 
-## Full uninstall test
+One command removes it — the cask's `uninstall`/`zap` stop the service and delete
+the LaunchAgent, config, and pane:
 
 ```bash
-brew uninstall --cask volume-limiter-gui
-brew services stop volume-limiter
-brew uninstall volume-limiter
-rm -rf ~/Library/Application\ Support/VolumeLimiter \
-       ~/Library/PreferencePanes/VolumeLimiter.prefPane \
-       ~/Library/LaunchAgents/com.hackwoodl.volumelimiter.plist
+brew uninstall --cask HackwoodL/tap/volume-limiter-gui
 ```
