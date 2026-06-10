@@ -1,8 +1,8 @@
 # Volume Limiter 测试报告
 
 测试日期：2026-06-10  
-测试机器：macOS Darwin 25.5.0，arm64，Command Line Tools Swift 6.0.3  
-当前限制：本机只有 Command Line Tools，没有完整 Xcode；prefPane 使用 `swiftc` 手工构建，不使用 `xcodebuild`。Homebrew Formula 安装被当前 Command Line Tools 版本阻塞；HDMI/AirPlay/聚合设备/不支持音量控制设备因当前没有对应外设而未覆盖。
+测试机器：macOS 26.5.1，arm64，Command Line Tools Swift 6.3.2
+当前限制：本机只有 Command Line Tools，没有完整 Xcode；prefPane 使用 `swiftc` 手工构建，不使用 `xcodebuild`。HDMI/AirPlay/聚合设备/不支持音量控制设备因当前没有对应外设而未覆盖。
 
 ## 1. 自动化与本机 smoke 测试
 
@@ -15,7 +15,8 @@
 | prefPane 安装 | `scripts/install-prefpane.sh` | 安装到 `~/Library/PreferencePanes` | 成功 |
 | Release 打包 | `scripts/build-release.sh 0.1.0` | 生成 CLI/daemon zip、GUI zip、SHA256SUMS | 成功 |
 | LaunchAgent bootstrap | `scripts/test-launch-agent.sh` | `launchctl bootstrap` 后 daemon 响应 status，并清理 plist/socket | 成功 |
-| 本地 Homebrew Formula 模拟安装 | 临时 tap + 本地 tarball + `brew install` | 安装并启动 service | 阻塞：Homebrew 要求更新 Command Line Tools 到 Xcode 26.3 |
+| 本地 Homebrew Formula/Cask 模拟安装 | 临时 tap + 本地 tarball/GUI zip + `brew install` | Formula/Cask 安装、服务启动、卸载清理 | 成功 |
+| Cask 自动安装 Formula 依赖 | 只执行 `brew install --cask hackwoodl/volume-limiter-local/volume-limiter-gui` | 自动安装 `volume-limiter` Formula 并安装 prefPane | 成功 |
 
 `swift run volume-limiter-tests` 关键输出：
 
@@ -192,22 +193,40 @@ ps -o pid=,%cpu=,rss=,comm= -p <pid>
 
 ## 8. 开机自启、分装与卸载
 
-这些项目依赖后续 GitHub Release 和 Homebrew tap，尚未执行：
+公开发布仍依赖后续 GitHub Release 和 Homebrew tap；本地临时 tap 已完成安装/卸载验证：
 
 | 项目 | 当前状态 | 后续验证方式 |
 | --- | --- | --- |
 | LaunchAgent 开机自启 | `launchctl bootstrap` 本地测试通过；已重启验证 | 重启后 `volume-limit status` 返回 `Volume Limiter daemon: running`，通过 |
-| 只装 CLI | Formula 已准备；本地临时 tap 安装已尝试但被 Homebrew 拦截 | 更新 Command Line Tools 到 Xcode 26.3 后重试，或发布 tag/release 后 `brew install HackwoodL/tap/volume-limiter` |
-| 只装 GUI 自动带 daemon | Cask 已准备；GUI zip SHA 尚未发布替换；依赖 Formula 安装 | Formula 可安装后再执行 `brew install --cask HackwoodL/tap/volume-limiter-gui` |
-| 分别卸载与 zap | 需要真实 tap 安装成功后验证 | 发布后执行 uninstall/zap 流程 |
+| 只装 CLI | 本地临时 tap Formula 安装、`brew services start`、`volume-limit status`、stop/uninstall 均通过 | 发布 tag/release 后用真实 tap 复测 |
+| 只装 GUI 自动带 daemon/CLI | 本地临时 tap Cask 自动安装 Formula 依赖；`volume-limit --help` 可用；prefPane 安装且无 quarantine | 发布 tag/release 后用真实 tap 复测 |
+| 分别卸载与 zap | 本地临时 tap Cask uninstall、Formula uninstall、临时 tap 清理均通过 | 发布后用真实 tap 复测 zap 流程 |
 
-本地 Formula 验证的实际阻塞输出：
+本地 Homebrew Formula + Cask 验证关键输出：
 
 ```text
-Error: Your Command Line Tools are too outdated.
-Update them from Software Update in System Settings.
-...
-You should download the Command Line Tools for Xcode 26.3.
+==> Installing volume-limiter from hackwoodl/volume-limiter-local
+==> swift build -c release --disable-sandbox
+🍺  /opt/homebrew/Cellar/volume-limiter/0.1.0: 9 files, 657.6KB
+==> Successfully started `volume-limiter` (label: homebrew.mxcl.volume-limiter)
+Volume Limiter daemon: running
+==> Installing Cask volume-limiter-gui
+==> Moving Preference Pane 'VolumeLimiter.prefPane' to '/Users/you/Library/PreferencePanes/VolumeLimiter.prefPane'
+🍺  volume-limiter-gui was successfully installed!
+/Users/you/Library/PreferencePanes/VolumeLimiter.prefPane: valid on disk
+/Users/you/Library/PreferencePanes/VolumeLimiter.prefPane: satisfies its Designated Requirement
+local-homebrew-formula-cask-test=passed
+```
+
+只安装 Cask 时自动安装 Formula 依赖的关键输出：
+
+```text
+==> Installing dependencies: volume-limiter
+==> Installing hackwoodl/volume-limiter-local/volume-limiter
+==> swift build -c release --disable-sandbox
+==> Installing Cask volume-limiter-gui
+🍺  volume-limiter-gui was successfully installed!
+local-homebrew-cask-dependency-test=passed
 ```
 
 重启自启验证的实际输出：
@@ -229,4 +248,4 @@ Diagnostics: none
 
 已完成并真实验证：Core/IPC/CLI 自动化测试、真实 daemon + CLI smoke、单实例冲突、prefPane 构建/签名/安装/Bundle 加载、System Settings 视觉确认和截图、键盘音量键 `<100ms` 回压延迟、蓝牙重连、Type-C 有线耳机、重启自启、基础资源占用采样。
 
-尚需后续阶段验证：HDMI/AirPlay/聚合设备/不支持音量控制设备（当前没有对应外设）、Homebrew 分装与卸载（当前本机被 Command Line Tools 版本阻塞）。
+尚需后续阶段验证：HDMI/AirPlay/聚合设备/不支持音量控制设备（当前没有对应外设），以及发布到真实 GitHub Release/Homebrew tap 后使用真实 URL/SHA 复测安装与卸载。

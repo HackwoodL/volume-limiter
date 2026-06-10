@@ -137,7 +137,7 @@ rm -rf ~/Library/Application\ Support/VolumeLimiter \
 
 See [`docs/TESTING.md`](docs/TESTING.md). Current coverage includes Core policy tests, IPC protocol tests, CLI parser/rendering tests, Unix socket conflict tests, real daemon + CLI smoke tests, prefPane bundle build/sign/load checks, System Settings screenshot, keyboard volume-key latency, Bluetooth reconnect, Type-C wired headset, reboot auto-start, and a short idle resource sample.
 
-Remaining follow-up validation: HDMI/AirPlay/aggregate/unsupported output devices when hardware is available, and Homebrew install/uninstall after Command Line Tools are updated and release SHA values are available.
+Remaining follow-up validation: HDMI/AirPlay/aggregate/unsupported output devices when hardware is available, and Homebrew install/uninstall against the public tap after release SHA values are available.
 
 ## Preference pane status
 
