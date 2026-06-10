@@ -9,7 +9,7 @@
 # The cask carries the self-contained VolumeLimiter.prefPane (which bundles
 # volume-limiterd + volume-limit), so no separate formula is needed.
 ####
-cask "volume-limiter-gui" do
+cask "volume-limiter" do
   version "0.1.0"
   sha256 "dc7c5cda8db7104fe695aa089574e2b813d7fa41a810f2f1af352e8952e865f4"
 
