@@ -169,10 +169,6 @@ See [`docs/TESTING.md`](docs/TESTING.md). Current coverage includes Core policy 
 
 Remaining follow-up validation: HDMI/AirPlay/aggregate/unsupported output devices when hardware is available, and Homebrew install/uninstall against the public tap after release SHA values are available.
 
-## Preference pane status
-
-`NSPreferencePane` is deprecated. Volume Limiter keeps it as the preferred v1 GUI because it integrates with System Settings on current macOS versions, but future macOS releases may remove or further restrict third-party preference panes. If that becomes unreliable, the fallback is a SwiftUI menu bar app that still talks to the same daemon.
-
 ## License
 
 Released under the [MIT License](LICENSE).
