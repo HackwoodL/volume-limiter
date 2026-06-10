@@ -15,13 +15,16 @@ struct VolumeLimiterTestRunner {
         try suite.run("Core bluetooth-only clamps Bluetooth devices", testBluetoothOnlyClampsBluetoothDevices)
         try suite.run("Core rejects invalid limit", testInvalidLimitIsRejected)
         try suite.run("Core disabled limiter does not clamp", testDisabledLimiterDoesNotClamp)
+        try suite.run("Core config store persists settings", testConfigStorePersistsSettings)
         try suite.run("IPC request/response Codable round trip", testRequestAndResponseCodableRoundTrip)
         try suite.run("IPC Unix socket handles newline JSON", testUnixSocketServerHandlesOneLineJSONRequests)
         try suite.run("IPC server returns structured error for invalid JSON", testServerRejectsInvalidJSON)
+        try suite.run("IPC rejects active duplicate socket server", testUnixSocketServerRejectsDuplicateActiveServer)
         try suite.run("CLI set sends setLimit request", testCLISetSendsSetLimitRequest)
         try suite.run("CLI get renders compact daemon status", testCLIGetRendersCompactStatus)
         try suite.run("CLI rejects invalid limit locally", testCLIRejectsInvalidLimit)
         try suite.run("CLI maps daemon connection failure", testCLIMapsDaemonConnectionFailure)
+        try suite.run("CLI talks to server over Unix socket", testCLITalksToServerOverUnixSocket)
 
         print("All \(suite.passed) Volume Limiter tests passed.")
     }
@@ -157,6 +160,23 @@ private func testDisabledLimiterDoesNotClamp() throws {
     try expectEqual(audio.volume, 80)
 }
 
+private func testConfigStorePersistsSettings() throws {
+    let url = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        .appendingPathComponent("config.json")
+    let store = VolumeLimiterConfigStore(fileURL: url)
+    let config = try VolumeLimiterConfig(
+        enabled: false,
+        limit: 33,
+        bluetoothOnly: true,
+        notifyOnLimit: true
+    )
+
+    try store.save(config)
+
+    try expectEqual(try store.load(), config)
+}
+
 private func testRequestAndResponseCodableRoundTrip() throws {
     let request = IPCRequest(id: "req-1", cmd: IPCCommand.setLimit.rawValue, value: 30)
     let requestData = try JSONEncoder().encode(request)
@@ -222,6 +242,23 @@ private func testServerRejectsInvalidJSON() throws {
     try expectEqual(response.error?.code, "invalidRequest")
 }
 
+private func testUnixSocketServerRejectsDuplicateActiveServer() throws {
+    let socketPath = temporarySocketPath()
+    let firstServer = UnixSocketServer(path: socketPath) { request in
+        IPCResponse.success(id: request.id)
+    }
+    try firstServer.start()
+    defer { firstServer.stop() }
+
+    let duplicateServer = UnixSocketServer(path: socketPath) { request in
+        IPCResponse.success(id: request.id)
+    }
+
+    try expectThrows {
+        try duplicateServer.start()
+    }
+}
+
 private func testCLISetSendsSetLimitRequest() throws {
     let client = FakeCLIClient(
         responses: [
@@ -285,6 +322,40 @@ private func testCLIMapsDaemonConnectionFailure() throws {
 
     try expectEqual(output.exitCode, 69)
     try expectTrue(output.stderr.contains("volume-limiterd is not running."), "daemon unavailable message")
+}
+
+private func testCLITalksToServerOverUnixSocket() throws {
+    let socketPath = temporarySocketPath()
+    var limit = 50
+    let server = UnixSocketServer(path: socketPath) { request in
+        switch request.command {
+        case .setLimit:
+            guard let value = request.value else {
+                return IPCResponse.failure(id: request.id, code: "missingArgument", message: "missing value")
+            }
+            limit = value
+            return fakeStatusResponse(id: request.id, limit: limit)
+        case .getStatus:
+            return fakeStatusResponse(id: request.id, limit: limit)
+        default:
+            return IPCResponse.failure(id: request.id, code: "unexpectedCommand", message: request.cmd)
+        }
+    }
+    try server.start()
+    defer { server.stop() }
+
+    let runner = VolumeLimitCommandRunner(
+        client: UnixSocketClient(path: socketPath),
+        requestID: { UUID().uuidString }
+    )
+
+    let setOutput = runner.run(arguments: ["set", "42"])
+    try expectEqual(setOutput.exitCode, 0)
+    try expectEqual(setOutput.stdout, "Limit set to 42%.\n")
+
+    let getOutput = runner.run(arguments: ["get"])
+    try expectEqual(getOutput.exitCode, 0)
+    try expectTrue(getOutput.stdout.contains("Limit: 42%"), "updated limit from socket server")
 }
 
 private func makeEngine(
@@ -373,6 +444,22 @@ private final class FakeCLIClient: VolumeLimiterClientSending {
         }
         return responses.removeFirst()
     }
+}
+
+private func fakeStatusResponse(id: String, limit: Int) -> IPCResponse {
+    IPCResponse(
+        ok: true,
+        id: id,
+        enabled: true,
+        limit: limit,
+        currentVolume: 10,
+        deviceName: "Fake Speakers",
+        bluetoothOnly: false,
+        notifyOnLimit: false,
+        deviceIsBluetooth: false,
+        volumeControlAvailable: true,
+        diagnostics: []
+    )
 }
 
 private func temporarySocketPath() -> String {

@@ -78,6 +78,7 @@ public final class UnixSocketServer {
         guard fd >= 0 else {
             throw UnixSocketError.systemCall("socket", errno)
         }
+        disableSigPipe(fd: fd)
 
         do {
             try bindSocket(fd: fd, path: path)
@@ -125,6 +126,7 @@ public final class UnixSocketServer {
                 }
                 break
             }
+            disableSigPipe(fd: clientFD)
 
             connectionQueue.async { [weak self] in
                 self?.handleConnection(fd: clientFD)
@@ -174,6 +176,7 @@ private func connectSocket(path: String) throws -> Int32 {
     guard fd >= 0 else {
         throw UnixSocketError.systemCall("socket", errno)
     }
+    disableSigPipe(fd: fd)
 
     do {
         try withSockAddrUn(path: path) { pointer, length in
@@ -232,6 +235,7 @@ private func removeStaleSocketIfNeeded(path: String) throws {
     guard fd >= 0 else {
         throw UnixSocketError.systemCall("socket", errno)
     }
+    disableSigPipe(fd: fd)
     defer { close(fd) }
 
     do {
@@ -256,6 +260,7 @@ private func writeAll(_ data: Data, to fd: Int32) throws {
         guard let baseAddress = rawBuffer.baseAddress else {
             return
         }
+
         var written = 0
         while written < data.count {
             let result = write(fd, baseAddress.advanced(by: written), data.count - written)
@@ -268,6 +273,11 @@ private func writeAll(_ data: Data, to fd: Int32) throws {
             written += result
         }
     }
+}
+
+private func disableSigPipe(fd: Int32) {
+    var value: Int32 = 1
+    setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &value, socklen_t(MemoryLayout<Int32>.size))
 }
 
 private func readLine(from fd: Int32) throws -> String {
