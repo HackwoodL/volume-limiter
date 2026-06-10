@@ -7,7 +7,7 @@
 "device.unavailable" = "Device: unavailable";
 "device.value" = "Device: %@";
 "value.unavailable" = "Unavailable";
-"bluetoothOnly.checkbox" = "Only limit Bluetooth outputs";
+"headphoneOnly.checkbox" = "Only limit headphone outputs";
 "launchAtLogin.checkbox" = "Start daemon at login";
 "notifyOnLimit.checkbox" = "Notify when volume is limited";
 "refresh.button" = "Refresh";
@@ -17,7 +17,7 @@
 "launchAgent.error" = "LaunchAgent error: %@";
 "daemon.startCommand" = "Start daemon: brew services start volume-limiter";
 "daemon.unknownError" = "daemon returned an unknown error";
-"daemon.status" = "Daemon running. Limiter: %@. Volume control: %@. Bluetooth device: %@.";
+"daemon.status" = "Daemon running. Limiter: %@. Volume control: %@. Headphone output: %@.";
 "daemon.notResponding" = "volume-limiterd is not running or did not respond.\nStart it with: brew services start volume-limiter";
 "daemon.executableNotFound" = "volume-limiterd was not found in /opt/homebrew/bin, /usr/local/bin, or next to this preference pane.";
 "diagnostics.none" = "Diagnostics: none";

@@ -23,7 +23,7 @@ public struct OutputDeviceSnapshot: Codable, Equatable {
     public var name: String
     public var currentVolume: Int?
     public var volumeControlAvailable: Bool
-    public var isBluetooth: Bool
+    public var isHeadphoneOutput: Bool
     public var diagnostics: [AudioDiagnostic]
 
     public init(
@@ -31,14 +31,14 @@ public struct OutputDeviceSnapshot: Codable, Equatable {
         name: String,
         currentVolume: Int?,
         volumeControlAvailable: Bool,
-        isBluetooth: Bool,
+        isHeadphoneOutput: Bool,
         diagnostics: [AudioDiagnostic] = []
     ) {
         self.id = id
         self.name = name
         self.currentVolume = currentVolume
         self.volumeControlAvailable = volumeControlAvailable
-        self.isBluetooth = isBluetooth
+        self.isHeadphoneOutput = isHeadphoneOutput
         self.diagnostics = diagnostics
     }
 }

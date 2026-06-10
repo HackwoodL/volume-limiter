@@ -62,7 +62,7 @@ public final class CoreAudioHardware: AudioHardwareControlling {
             name: name,
             currentVolume: volumeState.volume,
             volumeControlAvailable: volumeState.settable,
-            isBluetooth: transport == kAudioDeviceTransportTypeBluetooth,
+            isHeadphoneOutput: isHeadphoneOutput(name: name, transport: transport),
             diagnostics: diagnostics
         )
     }
@@ -331,6 +331,29 @@ public final class CoreAudioHardware: AudioHardwareControlling {
             return nil
         }
         return transport
+    }
+
+    private func isHeadphoneOutput(name: String, transport: UInt32?) -> Bool {
+        if transport == kAudioDeviceTransportTypeBluetooth {
+            return true
+        }
+
+        let normalizedName = name.lowercased()
+        let headphoneNameFragments = [
+            "headphone",
+            "headphones",
+            "headset",
+            "earphone",
+            "earphones",
+            "earbud",
+            "earbuds",
+            "airpods",
+            "beats",
+            "blackwire",
+            "freeclip",
+            "enco"
+        ]
+        return headphoneNameFragments.contains { normalizedName.contains($0) }
     }
 
     private func volumeAddress(element: AudioObjectPropertyElement) -> AudioObjectPropertyAddress {

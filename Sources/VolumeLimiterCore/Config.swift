@@ -5,19 +5,52 @@ public struct VolumeLimiterConfig: Codable, Equatable {
 
     public var enabled: Bool
     public var limit: Int
-    public var bluetoothOnly: Bool
+    public var headphoneOnly: Bool
     public var notifyOnLimit: Bool
 
     public init(
         enabled: Bool = true,
         limit: Int = VolumeLimiterConfig.defaultLimit,
-        bluetoothOnly: Bool = false,
+        headphoneOnly: Bool = false,
         notifyOnLimit: Bool = false
     ) throws {
         self.enabled = enabled
         self.limit = try Self.validatedLimit(limit)
-        self.bluetoothOnly = bluetoothOnly
+        self.headphoneOnly = headphoneOnly
         self.notifyOnLimit = notifyOnLimit
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case enabled
+        case limit
+        case headphoneOnly
+        case bluetoothOnly
+        case notifyOnLimit
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+        let limit = try container.decodeIfPresent(Int.self, forKey: .limit) ?? Self.defaultLimit
+        let headphoneOnly = try container.decodeIfPresent(Bool.self, forKey: .headphoneOnly)
+            ?? container.decodeIfPresent(Bool.self, forKey: .bluetoothOnly)
+            ?? false
+        let notifyOnLimit = try container.decodeIfPresent(Bool.self, forKey: .notifyOnLimit) ?? false
+
+        try self.init(
+            enabled: enabled,
+            limit: limit,
+            headphoneOnly: headphoneOnly,
+            notifyOnLimit: notifyOnLimit
+        )
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(enabled, forKey: .enabled)
+        try container.encode(limit, forKey: .limit)
+        try container.encode(headphoneOnly, forKey: .headphoneOnly)
+        try container.encode(notifyOnLimit, forKey: .notifyOnLimit)
     }
 
     public static var `default`: VolumeLimiterConfig {

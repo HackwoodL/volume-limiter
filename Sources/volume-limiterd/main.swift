@@ -85,11 +85,11 @@ private func handle(request: IPCRequest, engine: VolumeLimiterEngine) -> IPCResp
                 return missingArgumentResponse(id: request.id, argument: "enabled")
             }
             return response(id: request.id, status: try engine.setEnabled(enabled))
-        case .setBluetoothOnly:
+        case .setHeadphoneOnly:
             guard let enabled = request.enabled else {
                 return missingArgumentResponse(id: request.id, argument: "enabled")
             }
-            return response(id: request.id, status: try engine.setBluetoothOnly(enabled))
+            return response(id: request.id, status: try engine.setHeadphoneOnly(enabled))
         case .setNotifyOnLimit:
             guard let enabled = request.enabled else {
                 return missingArgumentResponse(id: request.id, argument: "enabled")
@@ -109,9 +109,9 @@ private func response(id: String, status: VolumeLimiterStatus) -> IPCResponse {
         limit: status.limit,
         currentVolume: status.currentVolume,
         deviceName: status.deviceName,
-        bluetoothOnly: status.bluetoothOnly,
+        headphoneOnly: status.headphoneOnly,
         notifyOnLimit: status.notifyOnLimit,
-        deviceIsBluetooth: status.deviceIsBluetooth,
+        deviceIsHeadphone: status.deviceIsHeadphone,
         volumeControlAvailable: status.volumeControlAvailable,
         diagnostics: status.diagnostics.map { "\($0.code): \($0.message)" }
     )

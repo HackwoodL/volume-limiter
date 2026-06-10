@@ -9,7 +9,7 @@
 | 项目 | 命令 | 预期结果 | 实际结果 |
 | --- | --- | --- | --- |
 | 构建 SwiftPM 工程 | `swift build` | 构建成功 | 成功 |
-| Core/IPC/CLI 自检 | `swift run volume-limiter-tests` | 所有测试通过 | 18 项全部通过 |
+| Core/IPC/CLI 自检 | `swift run volume-limiter-tests` | 所有测试通过 | 19 项全部通过 |
 | daemon + CLI 实机 smoke | `scripts/test-cli-daemon.py` | daemon 启动，CLI 可用，重复 daemon 被拒绝 | 成功 |
 | prefPane 构建 | `scripts/build-prefpane.sh` | 生成 ad-hoc 签名 `.prefPane` | 成功 |
 | prefPane 安装 | `scripts/install-prefpane.sh` | 安装到 `~/Library/PreferencePanes` | 成功 |
@@ -23,8 +23,9 @@
 ```text
 PASS Core clamps startup volume above limit
 PASS Core clamps on volume-change callback
-PASS Core bluetooth-only skips non-Bluetooth devices
-PASS Core bluetooth-only clamps Bluetooth devices
+PASS Core headphone-only skips speaker devices
+PASS Core headphone-only clamps Bluetooth headphones
+PASS Core headphone-only clamps wired headphones
 PASS Core rejects invalid limit
 PASS Core disabled limiter does not clamp
 PASS Core notifies when limit is enforced
@@ -39,7 +40,7 @@ PASS CLI get renders compact daemon status
 PASS CLI rejects invalid limit locally
 PASS CLI maps daemon connection failure
 PASS CLI talks to server over Unix socket
-All 18 Volume Limiter tests passed.
+All 19 Volume Limiter tests passed.
 ```
 
 `scripts/test-cli-daemon.py` 关键输出：
@@ -51,8 +52,8 @@ Enabled: on
 Limit: 50%
 Current volume: 0%
 Device: MacBook Air扬声器
-Bluetooth-only: off
-Device is Bluetooth: no
+Headphone-only: off
+Device is headphone: no
 Volume control available: yes
 Notify on limit: off
 Diagnostics: none
@@ -63,13 +64,13 @@ Limit: 100%
 Current volume: 0%
 Device: MacBook Air扬声器
 Enabled: on
-Bluetooth-only: off
+Headphone-only: off
 $ volume-limit off
 Volume limiting is off.
 $ volume-limit on
 Volume limiting is on.
-$ volume-limit bluetooth-only status
-Bluetooth-only mode is off.
+$ volume-limit headphone-only status
+Headphone-only mode is off.
 $ volume-limiterd # duplicate
 volume-limiterd: failed to start: bind failed: Address already in use
 $ volume-limit status # daemon stopped
@@ -106,8 +107,8 @@ Start it with: brew services start volume-limiter
 | 音量变化回调 | 回调触发后立即回压 | 使用 fake audio adapter 自检通过 |
 | 程序化触发回压延迟 | 设置 limit 20%，脚本触发到 30%，目标 `<100ms` | `clamp-latency-ms=9.66`，通过 |
 | 键盘音量键回压延迟 | 设置 limit 20%，人工按音量增大键，目标 `<100ms` | `clamp-latency-ms=5.06`，通过 |
-| Bluetooth-only | 非蓝牙跳过，蓝牙设备生效 | 使用 fake audio adapter 自检通过 |
-| 蓝牙输出识别 | 连接并切换到 OPPO Enco Free4，运行 `volume-limit status` | `Device is Bluetooth: yes`，通过 |
+| Headphone-only | 非耳机输出跳过，蓝牙/有线耳机输出生效 | 使用 fake audio adapter 自检通过 |
+| 蓝牙耳机输出识别 | 连接并切换到 OPPO Enco Free4，运行 `volume-limit status` | `Device is headphone: yes`，通过 |
 | 蓝牙设备超限回压延迟 | OPPO Enco Free4，limit 20%，脚本触发到 35%，目标 `<100ms` | `clamp-latency-ms=22.01`，通过 |
 | 蓝牙断开/重连后封顶 | OPPO Enco Free4 在限制关闭时设到 55%，断开；重新启用限制后重连 | 重连后 `Current volume: 20%`，通过 |
 | Type-C 有线耳机 | Poly Blackwire 3325 Series，limit 20%，脚本触发到 35%，目标 `<100ms` | `Volume control available: yes`，`clamp-latency-ms=63.63`，通过 |
@@ -128,7 +129,7 @@ Start it with: brew services start volume-limiter
 | `volume-limit get` | 显示上限、当前音量、设备名 | 实机 smoke 通过 |
 | `volume-limit on/off` | 启停封顶 | 实机 smoke 通过 |
 | `volume-limit status` | 显示 daemon 和设备状态 | 实机 smoke 通过 |
-| `volume-limit bluetooth-only status` | 显示蓝牙模式 | 实机 smoke 通过 |
+| `volume-limit headphone-only status` | 显示耳机模式 | 实机 smoke 通过 |
 | daemon 未运行 | 显示启动提示并退出 69 | 实机 smoke 通过 |
 
 daemon 未运行时实际输出：
@@ -153,7 +154,7 @@ Start it with: brew services start volume-limiter
 | 系统设置打开请求 | `open ~/Library/PreferencePanes/VolumeLimiter.prefPane` | System Settings 打开该 pane | 命令退出 0 |
 | 系统设置视觉确认 | 人工检查 System Settings 面板 | 面板显示完整控件，无底部裁切 | 成功；首次发现 `Diagnostics` 底部裁切，已通过加高主视图和压缩间距修复 |
 | 系统设置截图 | `screencapture -x docs/screenshots/prefpane-system-settings.png` | 保存真实截图 | 成功，路径见下方 |
-| 简体中文 GUI | `AppleLanguages=("zh-Hans")` 加载 prefPane 并遍历 label/button 文案 | 显示简体中文控件 | 成功，包含“上限”“当前音量”“仅限制蓝牙输出设备”等文案 |
+| 简体中文 GUI | `AppleLanguages=("zh-Hans")` 加载 prefPane 并遍历 label/button 文案 | 显示简体中文控件 | 成功，包含“上限”“当前音量”“仅限制耳机输出设备”等文案 |
 | GUI 自动刷新 | prefPane 可见时每 0.25 秒刷新一次 IPC status，离开面板后停止 timer | 不需要手动点 Refresh 才能看到状态变化 | 已实现；timer 只在面板可见期间运行 |
 
 截图：
@@ -166,7 +167,7 @@ prefPane UI 已包含：
 
 - 音量上限滑块，修改后通过 IPC 调用 `setLimit`。
 - 当前音量显示，通过 IPC 读取 daemon status。
-- “Only limit Bluetooth outputs” 开关，通过 IPC 调用 `setBluetoothOnly`。
+- “Only limit headphone outputs” 开关，通过 IPC 调用 `setHeadphoneOnly`。
 - “Start daemon at login” 开关，通过同一 LaunchAgent label `com.hackwoodl.volumelimiter` 调用 `launchctl` 管理。
 - “Notify when volume is limited” 开关，通过 IPC 调用 `setNotifyOnLimit`。
 
@@ -241,8 +242,8 @@ Enabled: on
 Limit: 50%
 Current volume: 20%
 Device: Poly Blackwire 3325 Series
-Bluetooth-only: off
-Device is Bluetooth: no
+Headphone-only: off
+Device is headphone: no
 Volume control available: yes
 Notify on limit: off
 Diagnostics: none

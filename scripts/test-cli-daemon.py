@@ -44,7 +44,7 @@ def main() -> int:
         run_cli(cli, ["get"])
         run_cli(cli, ["off"])
         run_cli(cli, ["on"])
-        run_cli(cli, ["bluetooth-only", "status"])
+        run_cli(cli, ["headphone-only", "status"])
 
         second = subprocess.run(
             [str(daemon)],

@@ -14,7 +14,7 @@ Volume Limiter is a lightweight macOS maximum-volume limiter. A single per-user 
 - GUI: ad-hoc signed `VolumeLimiter.prefPane` for macOS System Settings.
 - The prefPane auto-refreshes while visible and stops refreshing when you leave it.
 - Shared config owned by the daemon.
-- Optional Bluetooth-only mode.
+- Optional headphone-only mode for Bluetooth, USB, Type-C, and other headphone-like outputs.
 - Optional macOS notification when volume is capped.
 - No kernel extension, no virtual audio driver, no Developer ID, no notarization.
 
@@ -50,9 +50,9 @@ volume-limit get
 volume-limit on
 volume-limit off
 volume-limit status
-volume-limit bluetooth-only on
-volume-limit bluetooth-only off
-volume-limit bluetooth-only status
+volume-limit headphone-only on
+volume-limit headphone-only off
+volume-limit headphone-only status
 volume-limit --help
 ```
 

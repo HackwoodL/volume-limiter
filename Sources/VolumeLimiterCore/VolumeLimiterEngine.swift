@@ -5,9 +5,9 @@ public struct VolumeLimiterStatus: Codable, Equatable {
     public var limit: Int
     public var currentVolume: Int?
     public var deviceName: String
-    public var bluetoothOnly: Bool
+    public var headphoneOnly: Bool
     public var notifyOnLimit: Bool
-    public var deviceIsBluetooth: Bool
+    public var deviceIsHeadphone: Bool
     public var volumeControlAvailable: Bool
     public var diagnostics: [AudioDiagnostic]
 
@@ -16,9 +16,9 @@ public struct VolumeLimiterStatus: Codable, Equatable {
         limit: Int,
         currentVolume: Int?,
         deviceName: String,
-        bluetoothOnly: Bool,
+        headphoneOnly: Bool,
         notifyOnLimit: Bool,
-        deviceIsBluetooth: Bool,
+        deviceIsHeadphone: Bool,
         volumeControlAvailable: Bool,
         diagnostics: [AudioDiagnostic]
     ) {
@@ -26,9 +26,9 @@ public struct VolumeLimiterStatus: Codable, Equatable {
         self.limit = limit
         self.currentVolume = currentVolume
         self.deviceName = deviceName
-        self.bluetoothOnly = bluetoothOnly
+        self.headphoneOnly = headphoneOnly
         self.notifyOnLimit = notifyOnLimit
-        self.deviceIsBluetooth = deviceIsBluetooth
+        self.deviceIsHeadphone = deviceIsHeadphone
         self.volumeControlAvailable = volumeControlAvailable
         self.diagnostics = diagnostics
     }
@@ -109,12 +109,12 @@ public final class VolumeLimiterEngine {
     }
 
     @discardableResult
-    public func setBluetoothOnly(_ bluetoothOnly: Bool) throws -> VolumeLimiterStatus {
+    public func setHeadphoneOnly(_ headphoneOnly: Bool) throws -> VolumeLimiterStatus {
         lock.lock()
         defer { lock.unlock() }
-        config.bluetoothOnly = bluetoothOnly
+        config.headphoneOnly = headphoneOnly
         try configStore.save(config)
-        try enforceLimitLocked(reason: "setBluetoothOnly")
+        try enforceLimitLocked(reason: "setHeadphoneOnly")
         return statusLocked()
     }
 
@@ -162,7 +162,7 @@ public final class VolumeLimiterEngine {
         let deviceID = try audio.defaultOutputDevice()
         let snapshot = try audio.outputDeviceSnapshot(for: deviceID)
 
-        guard !config.bluetoothOnly || snapshot.isBluetooth else {
+        guard !config.headphoneOnly || snapshot.isHeadphoneOutput else {
             return
         }
 
@@ -207,9 +207,9 @@ public final class VolumeLimiterEngine {
                 limit: config.limit,
                 currentVolume: snapshot.currentVolume,
                 deviceName: snapshot.name,
-                bluetoothOnly: config.bluetoothOnly,
+                headphoneOnly: config.headphoneOnly,
                 notifyOnLimit: config.notifyOnLimit,
-                deviceIsBluetooth: snapshot.isBluetooth,
+                deviceIsHeadphone: snapshot.isHeadphoneOutput,
                 volumeControlAvailable: snapshot.volumeControlAvailable,
                 diagnostics: snapshot.diagnostics + runtimeDiagnostics
             )
@@ -219,9 +219,9 @@ public final class VolumeLimiterEngine {
                 limit: config.limit,
                 currentVolume: nil,
                 deviceName: "Unavailable",
-                bluetoothOnly: config.bluetoothOnly,
+                headphoneOnly: config.headphoneOnly,
                 notifyOnLimit: config.notifyOnLimit,
-                deviceIsBluetooth: false,
+                deviceIsHeadphone: false,
                 volumeControlAvailable: false,
                 diagnostics: runtimeDiagnostics + [
                     AudioDiagnostic(

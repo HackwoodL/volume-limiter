@@ -14,8 +14,8 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     private var daemonStatusLabel = NSTextField(labelWithString: "")
     private var diagnosticsLabel = NSTextField(labelWithString: "")
     private var limitSlider = NSSlider(value: 50, minValue: 0, maxValue: 100, target: nil, action: nil)
-    private var bluetoothOnlyButton = NSButton(
-        checkboxWithTitle: localized("bluetoothOnly.checkbox"),
+    private var headphoneOnlyButton = NSButton(
+        checkboxWithTitle: localized("headphoneOnly.checkbox"),
         target: nil,
         action: nil
     )
@@ -47,8 +47,8 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         limitSlider.numberOfTickMarks = 11
         limitSlider.allowsTickMarkValuesOnly = false
 
-        bluetoothOnlyButton.target = self
-        bluetoothOnlyButton.action = #selector(bluetoothOnlyChanged(_:))
+        headphoneOnlyButton.target = self
+        headphoneOnlyButton.action = #selector(headphoneOnlyChanged(_:))
 
         launchAtLoginButton.target = self
         launchAtLoginButton.action = #selector(launchAtLoginChanged(_:))
@@ -93,7 +93,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             limitRow,
             currentVolumeLabel,
             deviceLabel,
-            bluetoothOnlyButton,
+            headphoneOnlyButton,
             launchAtLoginButton,
             notifyOnLimitButton,
             buttonRow,
@@ -149,7 +149,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         }
     }
 
-    @objc private func bluetoothOnlyChanged(_ sender: NSButton) {
+    @objc private func headphoneOnlyChanged(_ sender: NSButton) {
         guard !isUpdatingControls else {
             return
         }
@@ -158,7 +158,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             let response = try send(
                 IPCRequest(
                     id: requestID(),
-                    cmd: IPCCommand.setBluetoothOnly.rawValue,
+                    cmd: IPCCommand.setHeadphoneOnly.rawValue,
                     enabled: sender.state == .on
                 )
             )
@@ -260,19 +260,19 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         }
 
         deviceLabel.stringValue = localizedFormat("device.value", response.deviceName ?? localized("value.unavailable"))
-        bluetoothOnlyButton.state = (response.bluetoothOnly ?? false) ? .on : .off
+        headphoneOnlyButton.state = (response.headphoneOnly ?? false) ? .on : .off
         notifyOnLimitButton.state = (response.notifyOnLimit ?? false) ? .on : .off
 
         let enabledText = (response.enabled ?? false) ? localized("state.on") : localized("state.off")
         let controlText = (response.volumeControlAvailable ?? false)
             ? localized("state.available")
             : localized("state.unavailable")
-        let bluetoothText = (response.deviceIsBluetooth ?? false) ? localized("state.yes") : localized("state.no")
+        let headphoneText = (response.deviceIsHeadphone ?? false) ? localized("state.yes") : localized("state.no")
         daemonStatusLabel.stringValue = localizedFormat(
             "daemon.status",
             enabledText,
             controlText,
-            bluetoothText
+            headphoneText
         )
 
         let diagnostics = response.diagnostics ?? []

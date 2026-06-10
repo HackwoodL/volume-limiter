@@ -11,8 +11,9 @@ struct VolumeLimiterTestRunner {
 
         try suite.run("Core clamps startup volume above limit", testStartClampsVolumeAboveLimit)
         try suite.run("Core clamps on volume-change callback", testVolumeChangeCallbackClampsImmediately)
-        try suite.run("Core bluetooth-only skips non-Bluetooth devices", testBluetoothOnlySkipsNonBluetoothDevices)
-        try suite.run("Core bluetooth-only clamps Bluetooth devices", testBluetoothOnlyClampsBluetoothDevices)
+        try suite.run("Core headphone-only skips speaker devices", testHeadphoneOnlySkipsSpeakerDevices)
+        try suite.run("Core headphone-only clamps Bluetooth headphones", testHeadphoneOnlyClampsBluetoothHeadphones)
+        try suite.run("Core headphone-only clamps wired headphones", testHeadphoneOnlyClampsWiredHeadphones)
         try suite.run("Core rejects invalid limit", testInvalidLimitIsRejected)
         try suite.run("Core disabled limiter does not clamp", testDisabledLimiterDoesNotClamp)
         try suite.run("Core notifies when limit is enforced", testNotifyOnLimit)
@@ -120,9 +121,9 @@ private func testVolumeChangeCallbackClampsImmediately() throws {
     try expectEqual(audio.volume, 50)
 }
 
-private func testBluetoothOnlySkipsNonBluetoothDevices() throws {
-    let audio = FakeAudioHardware(volume: 90, isBluetooth: false)
-    let config = try VolumeLimiterConfig(bluetoothOnly: true)
+private func testHeadphoneOnlySkipsSpeakerDevices() throws {
+    let audio = FakeAudioHardware(volume: 90, isHeadphoneOutput: false)
+    let config = try VolumeLimiterConfig(headphoneOnly: true)
     let engine = try makeEngine(audio: audio, config: config)
 
     try engine.start()
@@ -131,9 +132,21 @@ private func testBluetoothOnlySkipsNonBluetoothDevices() throws {
     try expectEqual(audio.volume, 90)
 }
 
-private func testBluetoothOnlyClampsBluetoothDevices() throws {
-    let audio = FakeAudioHardware(volume: 90, isBluetooth: true)
-    let config = try VolumeLimiterConfig(bluetoothOnly: true)
+private func testHeadphoneOnlyClampsBluetoothHeadphones() throws {
+    let audio = FakeAudioHardware(volume: 90, isHeadphoneOutput: true)
+    let config = try VolumeLimiterConfig(headphoneOnly: true)
+    let engine = try makeEngine(audio: audio, config: config)
+
+    try engine.start()
+
+    try expectEqual(audio.setVolumeCalls, [50])
+    try expectEqual(audio.volume, 50)
+}
+
+private func testHeadphoneOnlyClampsWiredHeadphones() throws {
+    let audio = FakeAudioHardware(volume: 90, isHeadphoneOutput: true)
+    audio.deviceName = "Poly Blackwire 3325 Series"
+    let config = try VolumeLimiterConfig(headphoneOnly: true)
     let engine = try makeEngine(audio: audio, config: config)
 
     try engine.start()
@@ -196,7 +209,7 @@ private func testConfigStorePersistsSettings() throws {
     let config = try VolumeLimiterConfig(
         enabled: false,
         limit: 33,
-        bluetoothOnly: true,
+        headphoneOnly: true,
         notifyOnLimit: true
     )
 
@@ -218,7 +231,7 @@ private func testRequestAndResponseCodableRoundTrip() throws {
         limit: 30,
         currentVolume: 24,
         deviceName: "MacBook Pro Speakers",
-        bluetoothOnly: false,
+        headphoneOnly: false,
         volumeControlAvailable: true,
         diagnostics: []
     )
@@ -314,7 +327,7 @@ private func testCLIGetRendersCompactStatus() throws {
                 limit: 45,
                 currentVolume: 12,
                 deviceName: "Fake Speakers",
-                bluetoothOnly: false
+                headphoneOnly: false
             )
         ]
     )
@@ -402,15 +415,16 @@ private func makeEngine(
 private final class FakeAudioHardware: AudioHardwareControlling {
     var deviceID: AudioDeviceIdentifier = 1
     var volume: Int
-    var isBluetooth: Bool
+    var isHeadphoneOutput: Bool
     var volumeControlAvailable: Bool
+    var deviceName: String = "Fake Speakers"
     var setVolumeCalls: [Int] = []
     private var volumeChanged: ((AudioDeviceIdentifier) -> Void)?
     private var defaultDeviceChanged: ((AudioDeviceIdentifier) -> Void)?
 
-    init(volume: Int, isBluetooth: Bool = false, volumeControlAvailable: Bool = true) {
+    init(volume: Int, isHeadphoneOutput: Bool = false, volumeControlAvailable: Bool = true) {
         self.volume = volume
-        self.isBluetooth = isBluetooth
+        self.isHeadphoneOutput = isHeadphoneOutput
         self.volumeControlAvailable = volumeControlAvailable
     }
 
@@ -421,10 +435,10 @@ private final class FakeAudioHardware: AudioHardwareControlling {
     func outputDeviceSnapshot(for deviceID: AudioDeviceIdentifier) throws -> OutputDeviceSnapshot {
         OutputDeviceSnapshot(
             id: deviceID,
-            name: "Fake Speakers",
+            name: deviceName,
             currentVolume: volume,
             volumeControlAvailable: volumeControlAvailable,
-            isBluetooth: isBluetooth
+            isHeadphoneOutput: isHeadphoneOutput
         )
     }
 
@@ -497,9 +511,9 @@ private func fakeStatusResponse(id: String, limit: Int) -> IPCResponse {
         limit: limit,
         currentVolume: 10,
         deviceName: "Fake Speakers",
-        bluetoothOnly: false,
+        headphoneOnly: false,
         notifyOnLimit: false,
-        deviceIsBluetooth: false,
+        deviceIsHeadphone: false,
         volumeControlAvailable: true,
         diagnostics: []
     )

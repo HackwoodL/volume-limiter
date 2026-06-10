@@ -52,8 +52,8 @@ public struct VolumeLimitCommandRunner {
                 return try handleToggle(arguments: arguments, enabled: true)
             case "off":
                 return try handleToggle(arguments: arguments, enabled: false)
-            case "bluetooth-only":
-                return try handleBluetoothOnly(arguments: arguments)
+            case "headphone-only":
+                return try handleHeadphoneOnly(arguments: arguments)
             default:
                 return usageError("Unknown command: \(first)", executableName: executableName)
             }
@@ -107,9 +107,9 @@ public struct VolumeLimitCommandRunner {
         return CommandOutput(stdout: "Volume limiting is \(state).\n")
     }
 
-    private func handleBluetoothOnly(arguments: [String]) throws -> CommandOutput {
+    private func handleHeadphoneOnly(arguments: [String]) throws -> CommandOutput {
         guard arguments.count == 2 else {
-            throw CLIError.usage("Expected: bluetooth-only <on|off|status>")
+            throw CLIError.usage("Expected: headphone-only <on|off|status>")
         }
 
         switch arguments[1] {
@@ -118,18 +118,18 @@ public struct VolumeLimitCommandRunner {
             let response = try send(
                 IPCRequest(
                     id: requestID(),
-                    cmd: IPCCommand.setBluetoothOnly.rawValue,
+                    cmd: IPCCommand.setHeadphoneOnly.rawValue,
                     enabled: enabled
                 )
             )
-            let state = try required(response.bluetoothOnly, field: "bluetoothOnly") ? "on" : "off"
-            return CommandOutput(stdout: "Bluetooth-only mode is \(state).\n")
+            let state = try required(response.headphoneOnly, field: "headphoneOnly") ? "on" : "off"
+            return CommandOutput(stdout: "Headphone-only mode is \(state).\n")
         case "status":
             let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.getStatus.rawValue))
-            let state = try required(response.bluetoothOnly, field: "bluetoothOnly") ? "on" : "off"
-            return CommandOutput(stdout: "Bluetooth-only mode is \(state).\n")
+            let state = try required(response.headphoneOnly, field: "headphoneOnly") ? "on" : "off"
+            return CommandOutput(stdout: "Headphone-only mode is \(state).\n")
         default:
-            throw CLIError.usage("Expected: bluetooth-only <on|off|status>")
+            throw CLIError.usage("Expected: headphone-only <on|off|status>")
         }
     }
 
@@ -214,7 +214,7 @@ private func compactStatusText(_ response: IPCResponse) throws -> String {
     Current volume: \(currentVolume)
     Device: \(try required(response.deviceName, field: "deviceName"))
     Enabled: \(try onOff(required(response.enabled, field: "enabled")))
-    Bluetooth-only: \(try onOff(required(response.bluetoothOnly, field: "bluetoothOnly")))
+    Headphone-only: \(try onOff(required(response.headphoneOnly, field: "headphoneOnly")))
     """
     .appending("\n")
 }
@@ -232,8 +232,8 @@ private func fullStatusText(_ response: IPCResponse) throws -> String {
     Limit: \(try required(response.limit, field: "limit"))%
     Current volume: \(currentVolume)
     Device: \(try required(response.deviceName, field: "deviceName"))
-    Bluetooth-only: \(try onOff(required(response.bluetoothOnly, field: "bluetoothOnly")))
-    Device is Bluetooth: \(try yesNo(required(response.deviceIsBluetooth, field: "deviceIsBluetooth")))
+    Headphone-only: \(try onOff(required(response.headphoneOnly, field: "headphoneOnly")))
+    Device is headphone: \(try yesNo(required(response.deviceIsHeadphone, field: "deviceIsHeadphone")))
     Volume control available: \(try yesNo(required(response.volumeControlAvailable, field: "volumeControlAvailable")))
     Notify on limit: \(try onOff(required(response.notifyOnLimit, field: "notifyOnLimit")))
     \(diagnosticText)
@@ -248,9 +248,9 @@ private func helpText(executableName: String) -> String {
       \(executableName) on
       \(executableName) off
       \(executableName) status
-      \(executableName) bluetooth-only on
-      \(executableName) bluetooth-only off
-      \(executableName) bluetooth-only status
+      \(executableName) headphone-only on
+      \(executableName) headphone-only off
+      \(executableName) headphone-only status
       \(executableName) --help
 
     volume-limit is a thin client; volume-limiterd owns Core Audio and configuration.

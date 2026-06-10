@@ -13,7 +13,7 @@ public enum IPCCommand: String, Codable, Equatable {
     case getStatus
     case setLimit
     case setEnabled
-    case setBluetoothOnly
+    case setHeadphoneOnly
     case setNotifyOnLimit
 }
 
@@ -61,9 +61,9 @@ public struct IPCResponse: Codable, Equatable {
     public var limit: Int?
     public var currentVolume: Int?
     public var deviceName: String?
-    public var bluetoothOnly: Bool?
+    public var headphoneOnly: Bool?
     public var notifyOnLimit: Bool?
-    public var deviceIsBluetooth: Bool?
+    public var deviceIsHeadphone: Bool?
     public var volumeControlAvailable: Bool?
     public var diagnostics: [String]?
 
@@ -75,9 +75,9 @@ public struct IPCResponse: Codable, Equatable {
         limit: Int? = nil,
         currentVolume: Int? = nil,
         deviceName: String? = nil,
-        bluetoothOnly: Bool? = nil,
+        headphoneOnly: Bool? = nil,
         notifyOnLimit: Bool? = nil,
-        deviceIsBluetooth: Bool? = nil,
+        deviceIsHeadphone: Bool? = nil,
         volumeControlAvailable: Bool? = nil,
         diagnostics: [String]? = nil
     ) {
@@ -88,9 +88,9 @@ public struct IPCResponse: Codable, Equatable {
         self.limit = limit
         self.currentVolume = currentVolume
         self.deviceName = deviceName
-        self.bluetoothOnly = bluetoothOnly
+        self.headphoneOnly = headphoneOnly
         self.notifyOnLimit = notifyOnLimit
-        self.deviceIsBluetooth = deviceIsBluetooth
+        self.deviceIsHeadphone = deviceIsHeadphone
         self.volumeControlAvailable = volumeControlAvailable
         self.diagnostics = diagnostics
     }
