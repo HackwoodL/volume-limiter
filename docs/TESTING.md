@@ -191,11 +191,11 @@ ps -o pid=,%cpu=,rss=,comm= -p <pid>
 
 ## 8. 开机自启、分装与卸载
 
-这些项目依赖后续 GitHub Release、Homebrew tap 和重启流程，尚未执行：
+这些项目依赖后续 GitHub Release 和 Homebrew tap，尚未执行：
 
 | 项目 | 当前状态 | 后续验证方式 |
 | --- | --- | --- |
-| LaunchAgent 开机自启 | `launchctl bootstrap` 本地测试通过；未重启验证 | 安装 formula 后启用开关，重启，再运行 `volume-limit status` |
+| LaunchAgent 开机自启 | `launchctl bootstrap` 本地测试通过；已重启验证 | 重启后 `volume-limit status` 返回 `Volume Limiter daemon: running`，通过 |
 | 只装 CLI | Formula 已准备；本地临时 tap 安装已尝试但被 Homebrew 拦截 | 更新 Command Line Tools 到 Xcode 26.3 后重试，或发布 tag/release 后 `brew install HackwoodL/tap/volume-limiter` |
 | 只装 GUI 自动带 daemon | Cask 已准备；GUI zip SHA 尚未发布替换；依赖 Formula 安装 | Formula 可安装后再执行 `brew install --cask HackwoodL/tap/volume-limiter-gui` |
 | 分别卸载与 zap | 需要真实 tap 安装成功后验证 | 发布后执行 uninstall/zap 流程 |
@@ -209,8 +209,23 @@ Update them from Software Update in System Settings.
 You should download the Command Line Tools for Xcode 26.3.
 ```
 
+重启自启验证的实际输出：
+
+```text
+Volume Limiter daemon: running
+Enabled: on
+Limit: 50%
+Current volume: 20%
+Device: Poly Blackwire 3325 Series
+Bluetooth-only: off
+Device is Bluetooth: no
+Volume control available: yes
+Notify on limit: off
+Diagnostics: none
+```
+
 ## 9. 结论
 
-已完成并真实验证：Core/IPC/CLI 自动化测试、真实 daemon + CLI smoke、单实例冲突、prefPane 构建/签名/安装/Bundle 加载、System Settings 视觉确认和截图、键盘音量键 `<100ms` 回压延迟、基础资源占用采样。
+已完成并真实验证：Core/IPC/CLI 自动化测试、真实 daemon + CLI smoke、单实例冲突、prefPane 构建/签名/安装/Bundle 加载、System Settings 视觉确认和截图、键盘音量键 `<100ms` 回压延迟、蓝牙重连、Type-C 有线耳机、重启自启、基础资源占用采样。
 
-尚需人工或后续阶段验证：HDMI/AirPlay/聚合设备/不支持音量控制设备、重启自启、Homebrew 分装与卸载（当前本机被 Command Line Tools 版本阻塞）。
+尚需人工或后续阶段验证：HDMI/AirPlay/聚合设备/不支持音量控制设备、Homebrew 分装与卸载（当前本机被 Command Line Tools 版本阻塞）。
