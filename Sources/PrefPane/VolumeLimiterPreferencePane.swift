@@ -24,6 +24,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     private let warningDetailLabel = NSTextField(labelWithString: "")
 
     private let addDevicePopup = NSPopUpButton(frame: .zero, pullsDown: true)
+    private let deviceEnableSwitch = NSSwitch()
     private let emptyDeviceLabel = NSTextField(labelWithString: localized("device.empty"))
     private var deviceRows: [String: PerDeviceRow] = [:]
     private var deviceStack: NSStackView?
@@ -62,17 +63,17 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             header,
             warning,
             limit,
-            deviceHeading,
-            devices,
             optionsHeading,
-            options
+            options,
+            deviceHeading,
+            devices
         ])
         outerStack.orientation = .vertical
         outerStack.alignment = .leading
         outerStack.spacing = 14
         outerStack.translatesAutoresizingMaskIntoConstraints = false
-        outerStack.setCustomSpacing(6, after: deviceHeading)
         outerStack.setCustomSpacing(6, after: optionsHeading)
+        outerStack.setCustomSpacing(6, after: deviceHeading)
 
         rootView.addSubview(outerStack)
         NSLayoutConstraint.activate([
@@ -181,6 +182,25 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
                 IPCRequest(
                     id: requestID(),
                     cmd: IPCCommand.setNotifyOnLimit.rawValue,
+                    enabled: sender.state == .on
+                )
+            )
+            apply(response)
+        } catch {
+            showDaemonError(error)
+            refreshStatus()
+        }
+    }
+
+    @objc private func deviceEnableSwitchChanged(_ sender: NSSwitch) {
+        guard !isUpdatingControls else {
+            return
+        }
+        do {
+            let response = try send(
+                IPCRequest(
+                    id: requestID(),
+                    cmd: IPCCommand.setDeviceLimitsEnabled.rawValue,
                     enabled: sender.state == .on
                 )
             )
@@ -318,6 +338,9 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         headphoneOnlySwitch.state = (response.headphoneOnly ?? false) ? .on : .off
         notifyOnLimitSwitch.state = (response.notifyOnLimit ?? false) ? .on : .off
 
+        let deviceLimitsEnabled = response.deviceLimitsEnabled ?? false
+        deviceEnableSwitch.state = deviceLimitsEnabled ? .on : .off
+        deviceStack?.isHidden = !deviceLimitsEnabled
         updateDeviceCard(overrides: response.deviceLimits ?? [], connected: response.connectedDevices ?? [])
 
         let limiterEnabled = response.enabled ?? false
@@ -350,6 +373,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         masterSwitch.isEnabled = daemonAvailable
         headphoneOnlySwitch.isEnabled = daemonAvailable
         notifyOnLimitSwitch.isEnabled = daemonAvailable
+        deviceEnableSwitch.isEnabled = daemonAvailable
         limitSlider.isEnabled = daemonAvailable
 
         let showControls = daemonAvailable && limiterEnabled
@@ -405,6 +429,8 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         launchAtLoginSwitch.action = #selector(launchAtLoginChanged(_:))
         notifyOnLimitSwitch.target = self
         notifyOnLimitSwitch.action = #selector(notifyOnLimitChanged(_:))
+        deviceEnableSwitch.target = self
+        deviceEnableSwitch.action = #selector(deviceEnableSwitchChanged(_:))
 
         for label in [limitTitleLabel, currentVolumeTitleLabel, deviceTitleLabel] {
             label.font = .systemFont(ofSize: 13)
@@ -487,10 +513,17 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     }
 
     private func makeDeviceCard() -> CardView {
+        let enableLabel = NSTextField(labelWithString: localized("device.enable"))
+        enableLabel.font = .systemFont(ofSize: 13)
+        enableLabel.lineBreakMode = .byTruncatingTail
+        let enableRow = makeRow([enableLabel, flexibleSpacer(), deviceEnableSwitch])
+
         emptyDeviceLabel.font = .systemFont(ofSize: 12)
         emptyDeviceLabel.textColor = .secondaryLabelColor
+        emptyDeviceLabel.lineBreakMode = .byWordWrapping
+        emptyDeviceLabel.maximumNumberOfLines = 2
+        emptyDeviceLabel.preferredMaxLayoutWidth = 480
 
-        addDevicePopup.target = nil
         addDevicePopup.controlSize = .small
         addDevicePopup.translatesAutoresizingMaskIntoConstraints = false
 
@@ -498,30 +531,39 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         addRow.orientation = .horizontal
         addRow.alignment = .centerY
         addRow.spacing = 8
-        addRow.heightAnchor.constraint(greaterThanOrEqualToConstant: 36).isActive = true
+        addRow.heightAnchor.constraint(greaterThanOrEqualToConstant: 34).isActive = true
 
         let emptyRow = NSStackView(views: [emptyDeviceLabel, flexibleSpacer()])
         emptyRow.orientation = .horizontal
         emptyRow.alignment = .centerY
-        emptyRow.heightAnchor.constraint(greaterThanOrEqualToConstant: 28).isActive = true
+        emptyRow.heightAnchor.constraint(greaterThanOrEqualToConstant: 26).isActive = true
 
-        let stack = NSStackView(views: [emptyRow, addRow])
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 4
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        deviceStack = stack
+        let content = NSStackView(views: [emptyRow, addRow])
+        content.orientation = .vertical
+        content.alignment = .leading
+        content.spacing = 4
+        content.translatesAutoresizingMaskIntoConstraints = false
+        content.isHidden = true
+        deviceStack = content
+
+        let outer = NSStackView(views: [enableRow, content])
+        outer.orientation = .vertical
+        outer.alignment = .leading
+        outer.spacing = 6
+        outer.translatesAutoresizingMaskIntoConstraints = false
 
         let card = CardView()
         card.translatesAutoresizingMaskIntoConstraints = false
-        card.addSubview(stack)
+        card.addSubview(outer)
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
-            stack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
-            stack.topAnchor.constraint(equalTo: card.topAnchor, constant: 8),
-            stack.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -8),
-            emptyRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            addRow.widthAnchor.constraint(equalTo: stack.widthAnchor)
+            outer.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+            outer.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
+            outer.topAnchor.constraint(equalTo: card.topAnchor, constant: 6),
+            outer.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -6),
+            enableRow.widthAnchor.constraint(equalTo: outer.widthAnchor),
+            content.widthAnchor.constraint(equalTo: outer.widthAnchor),
+            emptyRow.widthAnchor.constraint(equalTo: content.widthAnchor),
+            addRow.widthAnchor.constraint(equalTo: content.widthAnchor)
         ])
         return card
     }

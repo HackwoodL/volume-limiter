@@ -81,10 +81,20 @@ public struct VolumeLimitCommandRunner {
 
     private func handleDevice(arguments: [String]) throws -> CommandOutput {
         guard arguments.count >= 2 else {
-            throw CLIError.usage("Expected: device <list|set|remove> ...")
+            throw CLIError.usage("Expected: device <on|off|list|set|remove> ...")
         }
 
         switch arguments[1] {
+        case "on", "off":
+            guard arguments.count == 2 else {
+                throw CLIError.usage("Expected: device \(arguments[1])")
+            }
+            let enabled = arguments[1] == "on"
+            let response = try send(
+                IPCRequest(id: requestID(), cmd: IPCCommand.setDeviceLimitsEnabled.rawValue, enabled: enabled)
+            )
+            let state = (response.deviceLimitsEnabled ?? enabled) ? "on" : "off"
+            return CommandOutput(stdout: "Per-device caps are \(state).\n")
         case "list":
             guard arguments.count == 2 else {
                 throw CLIError.usage("Expected: device list")
@@ -122,7 +132,7 @@ public struct VolumeLimitCommandRunner {
             )
             return CommandOutput(stdout: "Removed per-device limit for \(uid).\n")
         default:
-            throw CLIError.usage("Expected: device <list|set|remove> ...")
+            throw CLIError.usage("Expected: device <on|off|list|set|remove> ...")
         }
     }
 
@@ -132,7 +142,10 @@ public struct VolumeLimitCommandRunner {
         let overrides = response.deviceLimits ?? []
         let connected = response.connectedDevices ?? []
 
-        var lines = ["Default limit: \(defaultLimit)%"]
+        var lines = [
+            "Per-device caps: \((response.deviceLimitsEnabled ?? false) ? "on" : "off")",
+            "Default limit: \(defaultLimit)%"
+        ]
         if overrides.isEmpty {
             lines.append("Per-device limits: none")
         } else {
@@ -326,6 +339,7 @@ private func helpText(executableName: String) -> String {
     """
     Usage:
       \(executableName) set <0-100>            Set the default cap for all devices
+      \(executableName) device on|off          Enable/disable per-device caps
       \(executableName) device list            List per-device caps and connected devices
       \(executableName) device set <uid> <n>   Cap a specific device by UID
       \(executableName) device remove <uid>    Remove a device's per-device cap

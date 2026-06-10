@@ -3,6 +3,7 @@
 "section.options" = "Options";
 "limit.title" = "Default cap";
 "device.section" = "Per-device caps";
+"device.enable" = "Set a cap for specific devices";
 "device.add" = "Add a device…";
 "device.remove" = "Remove";
 "device.empty" = "No per-device caps. The default applies to every device.";

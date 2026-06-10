@@ -47,6 +47,7 @@ scripts/install-prefpane.sh
 
 ```bash
 volume-limit set <0-100>            # 设置适用于所有设备的默认上限
+volume-limit device on|off          # 开启/关闭分设备上限功能
 volume-limit device set <uid> <n>   # 为指定 UID 的设备单独设置上限
 volume-limit device remove <uid>    # 移除某个设备的单独上限
 volume-limit device list            # 列出各设备上限与已连接设备

@@ -20,6 +20,7 @@ public struct VolumeLimiterConfig: Codable, Equatable {
     public var limit: Int
     public var headphoneOnly: Bool
     public var notifyOnLimit: Bool
+    public var deviceLimitsEnabled: Bool
     public var deviceLimits: [String: DeviceLimit]
 
     public init(
@@ -27,12 +28,14 @@ public struct VolumeLimiterConfig: Codable, Equatable {
         limit: Int = VolumeLimiterConfig.defaultLimit,
         headphoneOnly: Bool = false,
         notifyOnLimit: Bool = false,
+        deviceLimitsEnabled: Bool = false,
         deviceLimits: [String: DeviceLimit] = [:]
     ) throws {
         self.enabled = enabled
         self.limit = try Self.validatedLimit(limit)
         self.headphoneOnly = headphoneOnly
         self.notifyOnLimit = notifyOnLimit
+        self.deviceLimitsEnabled = deviceLimitsEnabled
         self.deviceLimits = try Self.validatedDeviceLimits(deviceLimits)
     }
 
@@ -42,6 +45,7 @@ public struct VolumeLimiterConfig: Codable, Equatable {
         case headphoneOnly
         case bluetoothOnly
         case notifyOnLimit
+        case deviceLimitsEnabled
         case deviceLimits
     }
 
@@ -53,6 +57,7 @@ public struct VolumeLimiterConfig: Codable, Equatable {
             ?? container.decodeIfPresent(Bool.self, forKey: .bluetoothOnly)
             ?? false
         let notifyOnLimit = try container.decodeIfPresent(Bool.self, forKey: .notifyOnLimit) ?? false
+        let deviceLimitsEnabled = try container.decodeIfPresent(Bool.self, forKey: .deviceLimitsEnabled) ?? false
         let storedDeviceLimits = try container.decodeIfPresent([String: DeviceLimit].self, forKey: .deviceLimits) ?? [:]
         let deviceLimits = storedDeviceLimits.mapValues { entry in
             DeviceLimit(limit: min(100, max(0, entry.limit)), name: entry.name)
@@ -63,6 +68,7 @@ public struct VolumeLimiterConfig: Codable, Equatable {
             limit: limit,
             headphoneOnly: headphoneOnly,
             notifyOnLimit: notifyOnLimit,
+            deviceLimitsEnabled: deviceLimitsEnabled,
             deviceLimits: deviceLimits
         )
     }
@@ -73,6 +79,7 @@ public struct VolumeLimiterConfig: Codable, Equatable {
         try container.encode(limit, forKey: .limit)
         try container.encode(headphoneOnly, forKey: .headphoneOnly)
         try container.encode(notifyOnLimit, forKey: .notifyOnLimit)
+        try container.encode(deviceLimitsEnabled, forKey: .deviceLimitsEnabled)
         try container.encode(deviceLimits, forKey: .deviceLimits)
     }
 

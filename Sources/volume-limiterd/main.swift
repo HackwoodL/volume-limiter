@@ -99,6 +99,11 @@ private func handle(request: IPCRequest, engine: VolumeLimiterEngine) -> IPCResp
                 return missingArgumentResponse(id: request.id, argument: "deviceUID")
             }
             return response(id: request.id, status: try engine.removeDeviceLimit(uid: uid))
+        case .setDeviceLimitsEnabled:
+            guard let enabled = request.enabled else {
+                return missingArgumentResponse(id: request.id, argument: "enabled")
+            }
+            return response(id: request.id, status: try engine.setDeviceLimitsEnabled(enabled))
         case .setEnabled:
             guard let enabled = request.enabled else {
                 return missingArgumentResponse(id: request.id, argument: "enabled")
@@ -136,6 +141,7 @@ private func response(id: String, status: VolumeLimiterStatus) -> IPCResponse {
         deviceUID: status.deviceUID,
         defaultLimit: status.defaultLimit,
         deviceHasLimitOverride: status.deviceHasLimitOverride,
+        deviceLimitsEnabled: status.deviceLimitsEnabled,
         deviceLimits: status.deviceLimits
             .map { DeviceLimitEntry(uid: $0.key, name: $0.value.name, limit: $0.value.limit) }
             .sorted { ($0.name ?? $0.uid).localizedCaseInsensitiveCompare($1.name ?? $1.uid) == .orderedAscending },

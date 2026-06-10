@@ -47,6 +47,7 @@ scripts/install-prefpane.sh
 
 ```bash
 volume-limit set <0-100>            # set the default cap for all devices
+volume-limit device on|off          # enable/disable per-device caps
 volume-limit device set <uid> <n>   # cap a specific device by UID
 volume-limit device remove <uid>    # remove a device's per-device cap
 volume-limit device list            # list per-device caps and connected devices

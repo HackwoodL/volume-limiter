@@ -2,7 +2,8 @@
 "app.subtitle" = "通过共享的 volume-limiterd 守护进程限制 macOS 当前输出音量上限。";
 "section.options" = "选项";
 "limit.title" = "默认上限";
-"device.section" = "为特定设备单独设置";
+"device.section" = "分设备上限";
+"device.enable" = "为特定设备单独设置上限";
 "device.add" = "添加设备…";
 "device.remove" = "移除";
 "device.empty" = "未单独设置任何设备（默认上限适用于全部设备）。";

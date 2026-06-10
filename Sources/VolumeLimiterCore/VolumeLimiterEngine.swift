@@ -4,6 +4,7 @@ public struct VolumeLimiterStatus: Codable, Equatable {
     public var enabled: Bool
     public var limit: Int
     public var defaultLimit: Int
+    public var deviceLimitsEnabled: Bool
     public var currentVolume: Int?
     public var deviceName: String
     public var deviceUID: String?
@@ -20,6 +21,7 @@ public struct VolumeLimiterStatus: Codable, Equatable {
         enabled: Bool,
         limit: Int,
         defaultLimit: Int,
+        deviceLimitsEnabled: Bool = false,
         currentVolume: Int?,
         deviceName: String,
         deviceUID: String? = nil,
@@ -35,6 +37,7 @@ public struct VolumeLimiterStatus: Codable, Equatable {
         self.enabled = enabled
         self.limit = limit
         self.defaultLimit = defaultLimit
+        self.deviceLimitsEnabled = deviceLimitsEnabled
         self.currentVolume = currentVolume
         self.deviceName = deviceName
         self.deviceUID = deviceUID
@@ -109,6 +112,17 @@ public final class VolumeLimiterEngine {
         config.limit = try VolumeLimiterConfig.validatedLimit(value)
         try configStore.save(config)
         try enforceLimitLocked(reason: "setLimit")
+        return statusLocked()
+    }
+
+    /// Enables or disables the per-device override feature as a whole.
+    @discardableResult
+    public func setDeviceLimitsEnabled(_ enabled: Bool) throws -> VolumeLimiterStatus {
+        lock.lock()
+        defer { lock.unlock() }
+        config.deviceLimitsEnabled = enabled
+        try configStore.save(config)
+        try enforceLimitLocked(reason: "setDeviceLimitsEnabled")
         return statusLocked()
     }
 
@@ -227,7 +241,10 @@ public final class VolumeLimiterEngine {
             return
         }
 
-        let effectiveLimit = config.resolvedLimit(forKey: deviceKey(for: snapshot), name: snapshot.name)
+        let override = config.deviceLimitsEnabled
+            ? config.deviceLimit(forKey: deviceKey(for: snapshot), name: snapshot.name)
+            : nil
+        let effectiveLimit = override?.limit ?? config.limit
         if currentVolume > effectiveLimit {
             try audio.setOutputVolume(deviceID: deviceID, percent: effectiveLimit)
             if config.notifyOnLimit {
@@ -256,11 +273,14 @@ public final class VolumeLimiterEngine {
         do {
             let deviceID = try audio.defaultOutputDevice()
             let snapshot = try audio.outputDeviceSnapshot(for: deviceID)
-            let override = config.deviceLimit(forKey: deviceKey(for: snapshot), name: snapshot.name)
+            let override = config.deviceLimitsEnabled
+                ? config.deviceLimit(forKey: deviceKey(for: snapshot), name: snapshot.name)
+                : nil
             return VolumeLimiterStatus(
                 enabled: config.enabled,
                 limit: override?.limit ?? config.limit,
                 defaultLimit: config.limit,
+                deviceLimitsEnabled: config.deviceLimitsEnabled,
                 currentVolume: snapshot.currentVolume,
                 deviceName: snapshot.name,
                 deviceUID: snapshot.uid,
@@ -278,6 +298,7 @@ public final class VolumeLimiterEngine {
                 enabled: config.enabled,
                 limit: config.limit,
                 defaultLimit: config.limit,
+                deviceLimitsEnabled: config.deviceLimitsEnabled,
                 currentVolume: nil,
                 deviceName: "Unavailable",
                 deviceUID: nil,

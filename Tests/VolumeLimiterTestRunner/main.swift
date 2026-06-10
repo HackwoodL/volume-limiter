@@ -20,6 +20,8 @@ struct VolumeLimiterTestRunner {
         try suite.run("Core does not notify when notify disabled", testNotifyDisabled)
         try suite.run("Core config store persists settings", testConfigStorePersistsSettings)
         try suite.run("Core per-device override clamps to device limit", testPerDeviceOverrideClampsToDeviceLimit)
+        try suite.run("Core per-device override ignored when disabled", testPerDeviceOverrideIgnoredWhenDisabled)
+        try suite.run("Core setDeviceLimitsEnabled toggles enforcement", testSetDeviceLimitsEnabledTogglesEnforcement)
         try suite.run("Core default limit applies without override", testDefaultLimitAppliesWhenNoDeviceOverride)
         try suite.run("Core setLimit sets the default cap", testSetLimitSetsDefault)
         try suite.run("Core setDeviceLimit clamps immediately", testSetDeviceLimitClampsImmediately)
@@ -40,6 +42,7 @@ struct VolumeLimiterTestRunner {
         try suite.run("CLI talks to server over Unix socket", testCLITalksToServerOverUnixSocket)
         try suite.run("CLI device set sends setDeviceLimit", testCLIDeviceSetSendsSetDeviceLimit)
         try suite.run("CLI device remove sends removeDeviceLimit", testCLIDeviceRemoveSendsRemoveDeviceLimit)
+        try suite.run("CLI device on enables per-device caps", testCLIDeviceOnSendsSetDeviceLimitsEnabled)
         try suite.run("CLI device list renders overrides", testCLIDeviceListRendersOverrides)
 
         print("All \(suite.passed) Volume Limiter tests passed.")
@@ -417,6 +420,7 @@ private func testPerDeviceOverrideClampsToDeviceLimit() throws {
     audio.uid = "uid-headphones"
     let config = try VolumeLimiterConfig(
         limit: 80,
+        deviceLimitsEnabled: true,
         deviceLimits: ["uid-headphones": DeviceLimit(limit: 40, name: "Headphones")]
     )
     let engine = try makeEngine(audio: audio, config: config)
@@ -427,11 +431,43 @@ private func testPerDeviceOverrideClampsToDeviceLimit() throws {
     try expectEqual(audio.volume, 40)
 }
 
+private func testPerDeviceOverrideIgnoredWhenDisabled() throws {
+    let audio = FakeAudioHardware(volume: 90)
+    audio.uid = "uid-headphones"
+    let config = try VolumeLimiterConfig(
+        limit: 80,
+        deviceLimitsEnabled: false,
+        deviceLimits: ["uid-headphones": DeviceLimit(limit: 40, name: "Headphones")]
+    )
+    let engine = try makeEngine(audio: audio, config: config)
+
+    try engine.start()
+
+    try expectEqual(audio.volume, 80)
+}
+
+private func testSetDeviceLimitsEnabledTogglesEnforcement() throws {
+    let audio = FakeAudioHardware(volume: 90)
+    audio.uid = "uid-x"
+    let config = try VolumeLimiterConfig(
+        limit: 80,
+        deviceLimitsEnabled: false,
+        deviceLimits: ["uid-x": DeviceLimit(limit: 40, name: "X")]
+    )
+    let engine = try makeEngine(audio: audio, config: config)
+    try engine.start()
+    try expectEqual(audio.volume, 80)
+
+    _ = try engine.setDeviceLimitsEnabled(true)
+    try expectEqual(audio.volume, 40)
+}
+
 private func testDefaultLimitAppliesWhenNoDeviceOverride() throws {
     let audio = FakeAudioHardware(volume: 90)
     audio.uid = "uid-speakers"
     let config = try VolumeLimiterConfig(
         limit: 55,
+        deviceLimitsEnabled: true,
         deviceLimits: ["uid-headphones": DeviceLimit(limit: 40, name: "Headphones")]
     )
     let engine = try makeEngine(audio: audio, config: config)
@@ -455,7 +491,7 @@ private func testSetLimitSetsDefault() throws {
 private func testSetDeviceLimitClampsImmediately() throws {
     let audio = FakeAudioHardware(volume: 90)
     audio.uid = "uid-x"
-    let engine = try makeEngine(audio: audio, config: try VolumeLimiterConfig(limit: 80))
+    let engine = try makeEngine(audio: audio, config: try VolumeLimiterConfig(limit: 80, deviceLimitsEnabled: true))
 
     _ = try engine.setDeviceLimit(uid: "uid-x", name: "X", limit: 45)
 
@@ -466,7 +502,7 @@ private func testSetDeviceLimitClampsImmediately() throws {
 private func testDeviceOverrideBeatsDefault() throws {
     let audio = FakeAudioHardware(volume: 10)
     audio.uid = "uid-x"
-    let engine = try makeEngine(audio: audio, config: try VolumeLimiterConfig(limit: 50))
+    let engine = try makeEngine(audio: audio, config: try VolumeLimiterConfig(limit: 50, deviceLimitsEnabled: true))
     try engine.start()
     _ = try engine.setDeviceLimit(uid: "uid-x", name: "Headphones", limit: 40)
 
@@ -482,7 +518,7 @@ private func testDeviceOverrideBeatsDefault() throws {
 private func testRemoveDeviceLimitFallsBackToDefault() throws {
     let audio = FakeAudioHardware(volume: 10)
     audio.uid = "uid-x"
-    let engine = try makeEngine(audio: audio, config: try VolumeLimiterConfig(limit: 55))
+    let engine = try makeEngine(audio: audio, config: try VolumeLimiterConfig(limit: 55, deviceLimitsEnabled: true))
     _ = try engine.setDeviceLimit(uid: "uid-x", name: "Headphones", limit: 40)
 
     let status = try engine.removeDeviceLimit(uid: "uid-x")
@@ -498,6 +534,7 @@ private func testNameFallbackWhenUIDChanges() throws {
     audio.deviceName = "Sony WH-1000XM5"
     let config = try VolumeLimiterConfig(
         limit: 80,
+        deviceLimitsEnabled: true,
         deviceLimits: ["uid-old": DeviceLimit(limit: 35, name: "Sony WH-1000XM5")]
     )
     let engine = try makeEngine(audio: audio, config: config)
@@ -574,6 +611,19 @@ private func testCLIDeviceRemoveSendsRemoveDeviceLimit() throws {
     try expectEqual(output.stdout, "Removed per-device limit for uid-a.\n")
     try expectEqual(client.requests, [
         IPCRequest(id: "fixed-id", cmd: IPCCommand.removeDeviceLimit.rawValue, deviceUID: "uid-a")
+    ])
+}
+
+private func testCLIDeviceOnSendsSetDeviceLimitsEnabled() throws {
+    let client = FakeCLIClient(responses: [IPCResponse(ok: true, id: "fixed-id", deviceLimitsEnabled: true)])
+    let runner = VolumeLimitCommandRunner(client: client, requestID: { "fixed-id" })
+
+    let output = runner.run(arguments: ["device", "on"])
+
+    try expectEqual(output.exitCode, 0)
+    try expectEqual(output.stdout, "Per-device caps are on.\n")
+    try expectEqual(client.requests, [
+        IPCRequest(id: "fixed-id", cmd: IPCCommand.setDeviceLimitsEnabled.rawValue, enabled: true)
     ])
 }
 

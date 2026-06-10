@@ -14,6 +14,7 @@ public enum IPCCommand: String, Codable, Equatable {
     case setLimit
     case setDeviceLimit
     case removeDeviceLimit
+    case setDeviceLimitsEnabled
     case setEnabled
     case setHeadphoneOnly
     case setNotifyOnLimit
@@ -101,6 +102,7 @@ public struct IPCResponse: Codable, Equatable {
     public var deviceUID: String?
     public var defaultLimit: Int?
     public var deviceHasLimitOverride: Bool?
+    public var deviceLimitsEnabled: Bool?
     public var deviceLimits: [DeviceLimitEntry]?
     public var connectedDevices: [DeviceEntry]?
 
@@ -120,6 +122,7 @@ public struct IPCResponse: Codable, Equatable {
         deviceUID: String? = nil,
         defaultLimit: Int? = nil,
         deviceHasLimitOverride: Bool? = nil,
+        deviceLimitsEnabled: Bool? = nil,
         deviceLimits: [DeviceLimitEntry]? = nil,
         connectedDevices: [DeviceEntry]? = nil
     ) {
@@ -138,6 +141,7 @@ public struct IPCResponse: Codable, Equatable {
         self.deviceUID = deviceUID
         self.defaultLimit = defaultLimit
         self.deviceHasLimitOverride = deviceHasLimitOverride
+        self.deviceLimitsEnabled = deviceLimitsEnabled
         self.deviceLimits = deviceLimits
         self.connectedDevices = connectedDevices
     }
