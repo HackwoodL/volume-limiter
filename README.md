@@ -51,25 +51,25 @@ build/checkout directory. Use `scripts/install-prefpane.sh` if you only want to 
 
 ```bash
 volume-limit set <0-100>            # set the default cap for all devices
+volume-limit get                    # print the current cap, volume, and device (compact)
+volume-limit status                 # print full daemon status and diagnostics
+volume-limit on                     # turn the limiter on
+volume-limit off                    # turn the limiter off
 volume-limit device on|off          # enable/disable per-device caps
 volume-limit device set <uid> <n>   # cap a specific device by UID
 volume-limit device remove <uid>    # remove a device's per-device cap
 volume-limit device list            # list per-device caps and connected devices
-volume-limit get
-volume-limit on
-volume-limit off
-volume-limit status
-volume-limit headphone-only on
-volume-limit headphone-only off
-volume-limit headphone-only status
-volume-limit --help
+volume-limit headphone-only on      # only limit headphone-like outputs
+volume-limit headphone-only off     # limit every output device
+volume-limit headphone-only status  # print whether headphone-only mode is on
+volume-limit --help                 # show usage
 ```
 
 If the daemon is not running, the CLI prints:
 
 ```text
 volume-limiterd is not running.
-Start it with: brew services start volume-limiter
+Start it from System Settings > Volume Limiter, or with Homebrew: brew services start volume-limiter
 ```
 
 ## Architecture
@@ -116,7 +116,7 @@ cp -R VolumeLimiter.prefPane ~/Library/PreferencePanes/
 open ~/Library/PreferencePanes/VolumeLimiter.prefPane
 ```
 
-Because this project intentionally avoids a paid Apple Developer Program membership, releases are ad-hoc signed and not notarized. On first launch macOS may require right-click Open, `xattr -cr`, or approving the pane from System Settings.
+Because the author is too broke to pay for an Apple Developer Program membership, releases are ad-hoc signed and not notarized. On first launch macOS may require right-click Open, `xattr -cr`, or approving the pane from System Settings.
 
 ## Uninstall
 
@@ -159,7 +159,3 @@ Remaining follow-up validation: HDMI/AirPlay/aggregate/unsupported output device
 - v0.1.x: finish release packaging, tap publication, and manual hardware validation.
 - v1.0: stable CLI + prefPane distribution.
 - v2: investigate driver-layer hard interception with a Core Audio HAL virtual device. v1 deliberately does not install drivers, kexts, or virtual audio devices.
-
-## Acknowledgements
-
-Inspired by the thin-client daemon architecture of `batt` and by the historical preference pane references `LegacySystemPreferences` and `LegacyPreferences`.
