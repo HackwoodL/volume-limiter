@@ -22,3 +22,12 @@
 "diagnostics.value" = "Diagnostics: %@";
 "warning.daemonNotRunning" = "Daemon not running";
 "warning.volumeControlUnavailable" = "Can't control the current output device's volume";
+"uninstall.button" = "Uninstall";
+"uninstall.confirm.title" = "Uninstall Volume Limiter?";
+"uninstall.confirm.body" = "This stops the background service and removes the preference pane, the LaunchAgent, and your saved limits. This can't be undone.";
+"uninstall.confirm.ok" = "Uninstall";
+"uninstall.confirm.cancel" = "Cancel";
+"uninstall.done.title" = "Volume Limiter removed";
+"uninstall.done.body" = "Quit and reopen System Settings to clear it from the sidebar.";
+"uninstall.done.ok" = "OK";
+"uninstall.error" = "Some items couldn't be removed:\n%@";

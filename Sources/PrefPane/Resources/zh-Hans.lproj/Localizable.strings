@@ -22,3 +22,12 @@
 "diagnostics.value" = "诊断：%@";
 "warning.daemonNotRunning" = "守护进程未运行";
 "warning.volumeControlUnavailable" = "无法控制当前输出设备的音量";
+"uninstall.button" = "卸载";
+"uninstall.confirm.title" = "卸载 Volume Limiter？";
+"uninstall.confirm.body" = "这会停止后台服务，并移除偏好设置面板、LaunchAgent 以及你保存的上限设置。此操作无法撤销。";
+"uninstall.confirm.ok" = "卸载";
+"uninstall.confirm.cancel" = "取消";
+"uninstall.done.title" = "已卸载 Volume Limiter";
+"uninstall.done.body" = "请退出并重新打开「系统设置」，即可将其从侧边栏清除。";
+"uninstall.done.ok" = "好";
+"uninstall.error" = "以下项目未能移除：\n%@";

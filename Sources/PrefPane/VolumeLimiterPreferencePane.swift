@@ -39,7 +39,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     private var optionsCard: NSView?
 
     public override func loadMainView() -> NSView {
-        let rootView = NSView(frame: NSRect(x: 0, y: 0, width: 620, height: 560))
+        let rootView = NSView(frame: NSRect(x: 0, y: 0, width: 620, height: 600))
 
         configureControls()
 
@@ -50,6 +50,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         let deviceHeading = sectionLabel(localized("device.section"))
         let options = makeOptionsCard()
         let optionsHeading = sectionLabel(localized("section.options"))
+        let footer = makeUninstallFooter()
 
         warningCard = warning
         limitCard = limit
@@ -66,7 +67,8 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             optionsHeading,
             options,
             deviceHeading,
-            devices
+            devices,
+            footer
         ])
         outerStack.orientation = .vertical
         outerStack.alignment = .leading
@@ -74,6 +76,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         outerStack.translatesAutoresizingMaskIntoConstraints = false
         outerStack.setCustomSpacing(6, after: optionsHeading)
         outerStack.setCustomSpacing(6, after: deviceHeading)
+        outerStack.setCustomSpacing(18, after: devices)
 
         rootView.addSubview(outerStack)
         NSLayoutConstraint.activate([
@@ -85,7 +88,8 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             warning.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
             limit.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
             devices.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
-            options.widthAnchor.constraint(equalTo: outerStack.widthAnchor)
+            options.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
+            footer.widthAnchor.constraint(equalTo: outerStack.widthAnchor)
         ])
 
         mainView = rootView
@@ -165,6 +169,31 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
 
     @objc private func startDaemonPressed(_ sender: NSButton) {
         setLaunchAgentEnabled(true, control: sender)
+    }
+
+    @objc private func uninstallPressed(_ sender: NSButton) {
+        let confirm = NSAlert()
+        confirm.alertStyle = .critical
+        confirm.messageText = localized("uninstall.confirm.title")
+        confirm.informativeText = localized("uninstall.confirm.body")
+        confirm.addButton(withTitle: localized("uninstall.confirm.ok"))
+        confirm.addButton(withTitle: localized("uninstall.confirm.cancel"))
+        guard confirm.runModal() == .alertFirstButtonReturn else {
+            return
+        }
+
+        stopAutoRefresh()
+        do {
+            try LaunchAgentManager.uninstallEverything()
+            let done = NSAlert()
+            done.messageText = localized("uninstall.done.title")
+            done.informativeText = localized("uninstall.done.body")
+            done.addButton(withTitle: localized("uninstall.done.ok"))
+            done.runModal()
+        } catch {
+            presentError(error.localizedDescription)
+            startAutoRefresh()
+        }
     }
 
     private func setLaunchAgentEnabled(_ enabled: Bool, control: NSControl) {
@@ -763,6 +792,22 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         return card
     }
 
+    private func makeUninstallFooter() -> NSView {
+        let button = NSButton(title: localized("uninstall.button"), target: self, action: #selector(uninstallPressed(_:)))
+        button.bezelStyle = .rounded
+        button.controlSize = .regular
+        button.setContentHuggingPriority(.required, for: .horizontal)
+        button.translatesAutoresizingMaskIntoConstraints = false
+
+        let row = NSStackView(views: [flexibleSpacer(), button])
+        row.orientation = .horizontal
+        row.alignment = .centerY
+        row.distribution = .fill
+        row.translatesAutoresizingMaskIntoConstraints = false
+        row.heightAnchor.constraint(greaterThanOrEqualToConstant: 28).isActive = true
+        return row
+    }
+
     private func optionLabel(_ text: String) -> NSTextField {
         let label = NSTextField(labelWithString: text)
         label.font = .systemFont(ofSize: 13)
@@ -894,6 +939,7 @@ private enum PreferencePaneError: Error, LocalizedError {
     case daemon(String)
     case daemonExecutableNotFound
     case launchctlFailed(String)
+    case uninstallIncomplete(String)
 
     var errorDescription: String? {
         switch self {
@@ -903,6 +949,8 @@ private enum PreferencePaneError: Error, LocalizedError {
             localized("daemon.executableNotFound")
         case let .launchctlFailed(message):
             message
+        case let .uninstallIncomplete(paths):
+            localizedFormat("uninstall.error", paths)
         }
     }
 }
@@ -988,6 +1036,34 @@ private enum LaunchAgentManager {
         if FileManager.default.fileExists(atPath: plistURL.path) {
             try? runLaunchctl(["bootout", "gui/\(getuid())", plistURL.path])
             try FileManager.default.removeItem(at: plistURL)
+        }
+    }
+
+    /// Removes every artifact a local install creates: the LaunchAgent (stopping
+    /// the daemon), the per-user support directory (daemon, CLI, config.json), the
+    /// stale socket, and finally this preference pane bundle itself.
+    static func uninstallEverything() throws {
+        let fm = FileManager.default
+
+        try? runLaunchctl(["bootout", "gui/\(getuid())", plistURL.path])
+        try? fm.removeItem(at: plistURL)
+
+        let support = fm.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library", isDirectory: true)
+            .appendingPathComponent("Application Support", isDirectory: true)
+            .appendingPathComponent("VolumeLimiter", isDirectory: true)
+        try? fm.removeItem(at: support)
+
+        unlink("/tmp/volume-limiter-\(getuid()).sock")
+
+        let bundleURL = Bundle(for: VolumeLimiterPreferencePane.self).bundleURL
+        try? fm.removeItem(at: bundleURL)
+
+        let leftovers = [plistURL, support, bundleURL]
+            .filter { fm.fileExists(atPath: $0.path) }
+            .map { $0.path }
+        if !leftovers.isEmpty {
+            throw PreferencePaneError.uninstallIncomplete(leftovers.joined(separator: "\n"))
         }
     }
 
