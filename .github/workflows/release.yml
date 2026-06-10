@@ -13,15 +13,28 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - name: Build release artifacts
-        run: scripts/build-release.sh "${GITHUB_REF_NAME#v}"
+      - name: Run tests
+        run: swift run volume-limiter-tests
+      - name: Build DMG
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          DMG="$(scripts/build-dmg.sh "$VERSION")"
+          echo "DMG=$DMG" >> "$GITHUB_ENV"
+      - name: Compute checksum
+        run: |
+          DIR="$(dirname "$DMG")"
+          ( cd "$DIR" && shasum -a 256 "$(basename "$DMG")" > SHA256SUMS )
+          echo "SUMS=$DIR/SHA256SUMS" >> "$GITHUB_ENV"
+          cat "$DIR/SHA256SUMS"
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
-            .build/release-artifacts/volume-limiter-cli-"$GITHUB_REF_NAME".zip \
-            .build/release-artifacts/VolumeLimiter-gui-"$GITHUB_REF_NAME".zip \
-            .build/release-artifacts/SHA256SUMS \
+            "$DMG" "$SUMS" \
             --title "$GITHUB_REF_NAME" \
-            --notes "Ad-hoc signed Volume Limiter release. Not notarized; remove quarantine with xattr -cr if needed."
+            --notes "Volume Limiter ${GITHUB_REF_NAME} — caps your macOS maximum output volume.
+
+          Install: open the DMG and double-click \`VolumeLimiter.prefPane\`, then click Install. The background service starts automatically.
+
+          Requires macOS 13 (Ventura) or later. The build is ad-hoc signed and not notarized, so on first launch macOS may ask you to approve it in System Settings > Privacy & Security (or run \`xattr -cr\` on the downloaded files)."
