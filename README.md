@@ -12,6 +12,7 @@ Volume Limiter is a lightweight macOS maximum-volume limiter. A single per-user 
 - Per-user daemon `volume-limiterd` that auto-starts in the background and idles near 0% CPU.
 - CLI: `volume-limit`.
 - GUI: ad-hoc signed `VolumeLimiter.prefPane` for macOS System Settings, with a master switch to turn limiting on/off.
+- Drag-to-install DMG: the pane bundles the daemon and CLI and starts the service on first load — double-click to install.
 - The prefPane auto-refreshes while visible and stops refreshing when you leave it.
 - Shared config owned by the daemon, so the CLI and GUI stay in sync.
 - Optional headphone-only mode for Bluetooth, USB, Type-C, and other headphone-like outputs.
@@ -22,25 +23,50 @@ Volume Limiter is a lightweight macOS maximum-volume limiter. A single per-user 
 
 ## Install
 
-### Recommended: local install (works today)
+### Easiest: drag-to-install DMG (recommended)
+
+Open `VolumeLimiter-<version>.dmg`, then **double-click `VolumeLimiter.prefPane`**
+inside it. Click **Install** when System Settings asks. The background service
+starts automatically — set your cap and you're done. No Terminal, clone, or
+Homebrew required.
+
+To uninstall, open System Settings ▸ Volume Limiter and click **Uninstall**.
+
+> Prebuilt DMGs aren't published to Releases yet. Until then, build one locally
+> with `scripts/build-dmg.sh` (it prints the path to the `.dmg`), or use the
+> one-command source install below.
+>
+> Because I can't afford an Apple Developer Program membership, the build is
+> ad-hoc signed and not notarized. After downloading a published DMG, macOS may
+> ask you to approve the pane in System Settings ▸ Privacy & Security, or to
+> right-click ▸ Open it the first time.
+
+### From source
 
 ```bash
 git clone https://github.com/HackwoodL/volume-limiter.git
 cd volume-limiter
-scripts/install-local.sh
+scripts/install-local.sh     # one-command install (daemon + CLI + prefPane)
 ```
 
-`install-local.sh` builds the universal binaries and installs everything into the
-app's own `~/Library/Application Support/VolumeLimiter` (with the LaunchAgent and
-prefPane under `~/Library`). It registers a LaunchAgent that auto-starts the
-daemon, so nothing runs out of your checkout directory. Run
-`scripts/install-prefpane.sh` later if you only want to refresh the GUI.
+`install-local.sh` builds the universal binaries and installs everything into
+`~/Library/Application Support/VolumeLimiter`, with the LaunchAgent and prefPane
+under `~/Library`, so nothing runs out of your checkout directory. Prefer a DMG?
+Run `scripts/build-dmg.sh` instead and double-click the pane inside it.
 
 The CLI installs to `~/Library/Application Support/VolumeLimiter/bin`. Add it to
 your `PATH` to call `volume-limit` directly:
 
 ```bash
 echo 'export PATH="$HOME/Library/Application Support/VolumeLimiter/bin:$PATH"' >> ~/.zshrc
+```
+
+For development you can also build and test without installing:
+
+```bash
+swift build
+swift run volume-limiter-tests
+scripts/test-cli-daemon.py
 ```
 
 ### Homebrew (planned — not published yet)
@@ -53,39 +79,11 @@ brew services start volume-limiter
 brew install --cask HackwoodL/tap/volume-limiter-gui   # prefPane GUI
 ```
 
-### Build from source
-
-```bash
-swift build
-swift run volume-limiter-tests
-scripts/test-cli-daemon.py
-```
-
-### Manual release install (GitHub Release)
-
-> Available once a GitHub Release is published. Until then, use the local install above.
-
-Download the release zips from GitHub:
-
-- `volume-limiter-cli-v0.1.0.zip`: universal `arm64`/`x86_64` `volume-limiterd` and `volume-limit`
-- `VolumeLimiter-gui-v0.1.0.zip`: `VolumeLimiter.prefPane`
-- `SHA256SUMS`
-
-Remove quarantine for unsigned/ad-hoc-signed downloads:
-
-```bash
-xattr -cr VolumeLimiter.prefPane volume-limiterd volume-limit
-```
-
-Install the prefPane manually:
-
-```bash
-mkdir -p ~/Library/PreferencePanes
-cp -R VolumeLimiter.prefPane ~/Library/PreferencePanes/
-open ~/Library/PreferencePanes/VolumeLimiter.prefPane
-```
-
-Because I can't afford an Apple Developer Program membership, releases are ad-hoc signed and not notarized. On first launch macOS may require right-click Open, `xattr -cr`, or approving the pane from System Settings.
+> If you install with Homebrew, **uninstall with Homebrew** (`brew uninstall` /
+> `brew services stop`). Homebrew tracks its own files and runs the daemon under
+> a separate `brew services` agent, so the in-pane **Uninstall** button and the
+> Terminal uninstall below apply to the DMG/source install, not to a Homebrew
+> one.
 
 ## CLI
 
