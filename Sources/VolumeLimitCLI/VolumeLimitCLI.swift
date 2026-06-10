@@ -44,6 +44,12 @@ public struct VolumeLimitCommandRunner {
             switch first {
             case "set":
                 return try handleSet(arguments: arguments)
+            case "default":
+                return try handleSetDefault(arguments: arguments)
+            case "reset":
+                return try handleReset(arguments: arguments)
+            case "device":
+                return try handleDevice(arguments: arguments)
             case "get":
                 return try handleGet(arguments: arguments)
             case "status":
@@ -73,7 +79,54 @@ public struct VolumeLimitCommandRunner {
         }
 
         let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.setLimit.rawValue, value: value))
-        return CommandOutput(stdout: "Limit set to \(try required(response.limit, field: "limit"))%.\n")
+        let device = response.deviceName ?? "the current device"
+        let limit = try required(response.limit, field: "limit")
+        return CommandOutput(stdout: "Limit for \(device) set to \(limit)%.\n")
+    }
+
+    private func handleSetDefault(arguments: [String]) throws -> CommandOutput {
+        guard arguments.count == 2 else {
+            throw CLIError.usage("Expected: default <0-100>")
+        }
+        guard let value = Int(arguments[1]), (0...100).contains(value) else {
+            throw CLIError.usage("Volume limit must be an integer in 0...100.")
+        }
+
+        let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.setDefaultLimit.rawValue, value: value))
+        let limit = try required(response.defaultLimit, field: "defaultLimit")
+        return CommandOutput(stdout: "Default limit set to \(limit)%.\n")
+    }
+
+    private func handleReset(arguments: [String]) throws -> CommandOutput {
+        guard arguments.count == 1 else {
+            throw CLIError.usage("Expected: reset")
+        }
+
+        let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.resetDeviceLimit.rawValue))
+        let device = response.deviceName ?? "the current device"
+        let limit = try required(response.limit, field: "limit")
+        return CommandOutput(stdout: "\(device) now uses the default limit (\(limit)%).\n")
+    }
+
+    private func handleDevice(arguments: [String]) throws -> CommandOutput {
+        guard arguments.count == 2, arguments[1] == "list" else {
+            throw CLIError.usage("Expected: device list")
+        }
+
+        let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.getStatus.rawValue))
+        let defaultLimit = try required(response.defaultLimit, field: "defaultLimit")
+        let entries = response.deviceLimits ?? []
+
+        var lines = ["Default limit: \(defaultLimit)%"]
+        if entries.isEmpty {
+            lines.append("No per-device limits configured.")
+        } else {
+            lines.append("Per-device limits:")
+            for entry in entries {
+                lines.append("  - \(entry.name ?? entry.uid): \(entry.limit)%  [\(entry.uid)]")
+            }
+        }
+        return CommandOutput(stdout: lines.joined(separator: "\n").appending("\n"))
     }
 
     private func handleGet(arguments: [String]) throws -> CommandOutput {
@@ -209,8 +262,10 @@ private func required<T>(_ value: T?, field: String) throws -> T {
 
 private func compactStatusText(_ response: IPCResponse) throws -> String {
     let currentVolume = response.currentVolume.map { "\($0)%" } ?? "unavailable"
+    let limit = try required(response.limit, field: "limit")
+    let scope = (response.deviceHasLimitOverride ?? false) ? "this device" : "default"
     return """
-    Limit: \(try required(response.limit, field: "limit"))%
+    Limit: \(limit)% (\(scope))
     Current volume: \(currentVolume)
     Device: \(try required(response.deviceName, field: "deviceName"))
     Enabled: \(try onOff(required(response.enabled, field: "enabled")))
@@ -226,24 +281,33 @@ private func fullStatusText(_ response: IPCResponse) throws -> String {
         ? "Diagnostics: none\n"
         : "Diagnostics:\n" + diagnostics.map { "  - \($0)" }.joined(separator: "\n") + "\n"
 
+    let overrides = response.deviceLimits ?? []
+    let deviceLimitsText = overrides.isEmpty
+        ? "Per-device limits: none\n"
+        : "Per-device limits:\n" + overrides.map { "  - \($0.name ?? $0.uid): \($0.limit)%" }.joined(separator: "\n") + "\n"
+
     return """
     Volume Limiter daemon: running
     Enabled: \(try onOff(required(response.enabled, field: "enabled")))
-    Limit: \(try required(response.limit, field: "limit"))%
+    Limit: \(try required(response.limit, field: "limit"))% (\((response.deviceHasLimitOverride ?? false) ? "per-device override" : "default"))
+    Default limit: \(try required(response.defaultLimit, field: "defaultLimit"))%
     Current volume: \(currentVolume)
     Device: \(try required(response.deviceName, field: "deviceName"))
     Headphone-only: \(try onOff(required(response.headphoneOnly, field: "headphoneOnly")))
     Device is headphone: \(try yesNo(required(response.deviceIsHeadphone, field: "deviceIsHeadphone")))
     Volume control available: \(try yesNo(required(response.volumeControlAvailable, field: "volumeControlAvailable")))
     Notify on limit: \(try onOff(required(response.notifyOnLimit, field: "notifyOnLimit")))
-    \(diagnosticText)
+    \(deviceLimitsText)\(diagnosticText)
     """
 }
 
 private func helpText(executableName: String) -> String {
     """
     Usage:
-      \(executableName) set <0-100>
+      \(executableName) set <0-100>          Cap the device you're currently using
+      \(executableName) reset                Make the current device use the default cap
+      \(executableName) default <0-100>      Set the default cap for other devices
+      \(executableName) device list          List per-device caps
       \(executableName) get
       \(executableName) on
       \(executableName) off
@@ -254,6 +318,8 @@ private func helpText(executableName: String) -> String {
       \(executableName) --help
 
     volume-limit is a thin client; volume-limiterd owns Core Audio and configuration.
+    Each output device remembers its own cap; "default" applies to devices you
+    haven't set explicitly.
     """
 }
 

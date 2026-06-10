@@ -20,6 +20,7 @@ public struct AudioDiagnostic: Codable, Equatable {
 
 public struct OutputDeviceSnapshot: Codable, Equatable {
     public var id: AudioDeviceIdentifier
+    public var uid: String?
     public var name: String
     public var currentVolume: Int?
     public var volumeControlAvailable: Bool
@@ -28,6 +29,7 @@ public struct OutputDeviceSnapshot: Codable, Equatable {
 
     public init(
         id: AudioDeviceIdentifier,
+        uid: String? = nil,
         name: String,
         currentVolume: Int?,
         volumeControlAvailable: Bool,
@@ -35,6 +37,7 @@ public struct OutputDeviceSnapshot: Codable, Equatable {
         diagnostics: [AudioDiagnostic] = []
     ) {
         self.id = id
+        self.uid = uid
         self.name = name
         self.currentVolume = currentVolume
         self.volumeControlAvailable = volumeControlAvailable

@@ -2,6 +2,9 @@
 "app.subtitle" = "Caps the current macOS output volume through the shared volume-limiterd daemon.";
 "section.options" = "Options";
 "limit.title" = "Limit";
+"limit.scope.override" = "This device only · default %d%%";
+"limit.scope.default" = "Default cap, shared by other devices";
+"reset.button" = "Use default";
 "currentVolume.title" = "Current volume";
 "device.title" = "Device";
 "percent.value" = "%d%%";

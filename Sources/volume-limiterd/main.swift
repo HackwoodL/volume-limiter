@@ -80,6 +80,16 @@ private func handle(request: IPCRequest, engine: VolumeLimiterEngine) -> IPCResp
                 return invalidArgumentResponse(id: request.id, message: "value must be an integer in 0...100")
             }
             return response(id: request.id, status: try engine.setLimit(value))
+        case .setDefaultLimit:
+            guard let value = request.value else {
+                return missingArgumentResponse(id: request.id, argument: "value")
+            }
+            guard (0...100).contains(value) else {
+                return invalidArgumentResponse(id: request.id, message: "value must be an integer in 0...100")
+            }
+            return response(id: request.id, status: try engine.setDefaultLimit(value))
+        case .resetDeviceLimit:
+            return response(id: request.id, status: try engine.resetCurrentDeviceLimit())
         case .setEnabled:
             guard let enabled = request.enabled else {
                 return missingArgumentResponse(id: request.id, argument: "enabled")
@@ -113,7 +123,13 @@ private func response(id: String, status: VolumeLimiterStatus) -> IPCResponse {
         notifyOnLimit: status.notifyOnLimit,
         deviceIsHeadphone: status.deviceIsHeadphone,
         volumeControlAvailable: status.volumeControlAvailable,
-        diagnostics: status.diagnostics.map { "\($0.code): \($0.message)" }
+        diagnostics: status.diagnostics.map { "\($0.code): \($0.message)" },
+        deviceUID: status.deviceUID,
+        defaultLimit: status.defaultLimit,
+        deviceHasLimitOverride: status.deviceHasLimitOverride,
+        deviceLimits: status.deviceLimits
+            .map { DeviceLimitEntry(uid: $0.key, name: $0.value.name, limit: $0.value.limit) }
+            .sorted { ($0.name ?? $0.uid).localizedCaseInsensitiveCompare($1.name ?? $1.uid) == .orderedAscending }
     )
 }
 

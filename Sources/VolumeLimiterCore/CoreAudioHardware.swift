@@ -44,6 +44,7 @@ public final class CoreAudioHardware: AudioHardwareControlling {
 
     public func outputDeviceSnapshot(for deviceID: AudioDeviceIdentifier) throws -> OutputDeviceSnapshot {
         let name = deviceName(deviceID: deviceID)
+        let uid = deviceUID(deviceID: deviceID)
         let transport = transportType(deviceID: deviceID)
         let volumeState = readOutputVolume(deviceID: deviceID)
 
@@ -59,6 +60,7 @@ public final class CoreAudioHardware: AudioHardwareControlling {
 
         return OutputDeviceSnapshot(
             id: deviceID,
+            uid: uid,
             name: name,
             currentVolume: volumeState.volume,
             volumeControlAvailable: volumeState.settable,
@@ -313,6 +315,25 @@ public final class CoreAudioHardware: AudioHardwareControlling {
             return "Unknown Output Device"
         }
         return name.takeRetainedValue() as String
+    }
+
+    private func deviceUID(deviceID: AudioDeviceIdentifier) -> String? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyDeviceUID,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        guard hasProperty(deviceID: deviceID, address: address) else {
+            return nil
+        }
+        var uid: Unmanaged<CFString>?
+        var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+        let status = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &uid)
+        guard status == noErr, let uid else {
+            return nil
+        }
+        let value = uid.takeRetainedValue() as String
+        return value.isEmpty ? nil : value
     }
 
     private func transportType(deviceID: AudioDeviceIdentifier) -> UInt32? {

@@ -12,6 +12,8 @@ public enum IPCCommand: String, Codable, Equatable {
     case ping
     case getStatus
     case setLimit
+    case setDefaultLimit
+    case resetDeviceLimit
     case setEnabled
     case setHeadphoneOnly
     case setNotifyOnLimit
@@ -53,6 +55,19 @@ public struct IPCErrorPayload: Codable, Equatable {
     }
 }
 
+/// A per-device volume cap override, transported in status responses for listing.
+public struct DeviceLimitEntry: Codable, Equatable {
+    public var uid: String
+    public var name: String?
+    public var limit: Int
+
+    public init(uid: String, name: String? = nil, limit: Int) {
+        self.uid = uid
+        self.name = name
+        self.limit = limit
+    }
+}
+
 public struct IPCResponse: Codable, Equatable {
     public var ok: Bool
     public var id: String
@@ -66,6 +81,10 @@ public struct IPCResponse: Codable, Equatable {
     public var deviceIsHeadphone: Bool?
     public var volumeControlAvailable: Bool?
     public var diagnostics: [String]?
+    public var deviceUID: String?
+    public var defaultLimit: Int?
+    public var deviceHasLimitOverride: Bool?
+    public var deviceLimits: [DeviceLimitEntry]?
 
     public init(
         ok: Bool,
@@ -79,7 +98,11 @@ public struct IPCResponse: Codable, Equatable {
         notifyOnLimit: Bool? = nil,
         deviceIsHeadphone: Bool? = nil,
         volumeControlAvailable: Bool? = nil,
-        diagnostics: [String]? = nil
+        diagnostics: [String]? = nil,
+        deviceUID: String? = nil,
+        defaultLimit: Int? = nil,
+        deviceHasLimitOverride: Bool? = nil,
+        deviceLimits: [DeviceLimitEntry]? = nil
     ) {
         self.ok = ok
         self.id = id
@@ -93,6 +116,10 @@ public struct IPCResponse: Codable, Equatable {
         self.deviceIsHeadphone = deviceIsHeadphone
         self.volumeControlAvailable = volumeControlAvailable
         self.diagnostics = diagnostics
+        self.deviceUID = deviceUID
+        self.defaultLimit = defaultLimit
+        self.deviceHasLimitOverride = deviceHasLimitOverride
+        self.deviceLimits = deviceLimits
     }
 
     public static func success(id: String) -> IPCResponse {

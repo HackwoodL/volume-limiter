@@ -2,6 +2,9 @@
 "app.subtitle" = "通过共享的 volume-limiterd 守护进程限制 macOS 当前输出音量上限。";
 "section.options" = "选项";
 "limit.title" = "上限";
+"limit.scope.override" = "仅用于当前设备 · 默认 %d%%";
+"limit.scope.default" = "默认上限，其他设备也使用此值";
+"reset.button" = "恢复默认";
 "currentVolume.title" = "当前音量";
 "device.title" = "设备";
 "percent.value" = "%d%%";

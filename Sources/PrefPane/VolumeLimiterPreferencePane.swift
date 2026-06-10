@@ -16,6 +16,8 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
 
     private let limitTitleLabel = NSTextField(labelWithString: localized("limit.title"))
     private let limitValueLabel = NSTextField(labelWithString: localized("percent.placeholder"))
+    private let limitScopeLabel = NSTextField(labelWithString: "")
+    private let resetDefaultButton = NSButton(title: localized("reset.button"), target: nil, action: nil)
     private let currentVolumeTitleLabel = NSTextField(labelWithString: localized("currentVolume.title"))
     private let currentVolumeValueLabel = NSTextField(labelWithString: localized("value.unavailable"))
     private let deviceTitleLabel = NSTextField(labelWithString: localized("device.title"))
@@ -174,6 +176,16 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         }
     }
 
+    @objc private func resetLimitButtonPressed(_: NSButton) {
+        do {
+            let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.resetDeviceLimit.rawValue))
+            apply(response)
+        } catch {
+            showDaemonError(error)
+            refreshStatus()
+        }
+    }
+
     private func presentError(_ message: String) {
         let alert = NSAlert()
         alert.alertStyle = .warning
@@ -187,7 +199,6 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
 
     private func refreshStatus() {
         launchAtLoginSwitch.state = LaunchAgentManager.isEnabled ? .on : .off
-
         do {
             let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.getStatus.rawValue))
             apply(response)
@@ -228,6 +239,13 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         let limit = response.limit ?? Int(limitSlider.doubleValue.rounded())
         limitSlider.integerValue = limit
         limitValueLabel.stringValue = localizedFormat("percent.value", limit)
+
+        let hasOverride = response.deviceHasLimitOverride ?? false
+        let defaultLimit = response.defaultLimit ?? limit
+        limitScopeLabel.stringValue = hasOverride
+            ? localizedFormat("limit.scope.override", defaultLimit)
+            : localized("limit.scope.default")
+        resetDefaultButton.isHidden = !hasOverride
 
         if let currentVolume = response.currentVolume {
             currentVolumeValueLabel.stringValue = localizedFormat("percent.value", currentVolume)
@@ -335,6 +353,17 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             label.widthAnchor.constraint(greaterThanOrEqualToConstant: 48).isActive = true
         }
 
+        limitScopeLabel.font = .systemFont(ofSize: 11)
+        limitScopeLabel.textColor = .secondaryLabelColor
+        limitScopeLabel.lineBreakMode = .byTruncatingTail
+
+        resetDefaultButton.target = self
+        resetDefaultButton.action = #selector(resetLimitButtonPressed(_:))
+        resetDefaultButton.bezelStyle = .rounded
+        resetDefaultButton.controlSize = .small
+        resetDefaultButton.isHidden = true
+        resetDefaultButton.setContentHuggingPriority(.required, for: .horizontal)
+
         warningTitleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
         warningTitleLabel.lineBreakMode = .byWordWrapping
         warningTitleLabel.maximumNumberOfLines = 2
@@ -397,10 +426,32 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     }
 
     private func makeLimitCard() -> CardView {
-        let limitRowView = makeRow([limitTitleLabel, limitSlider, limitValueLabel])
+        let topRow = NSStackView(views: [limitTitleLabel, limitSlider, limitValueLabel])
+        topRow.orientation = .horizontal
+        topRow.alignment = .centerY
+        topRow.distribution = .fill
+        topRow.spacing = 12
+        topRow.heightAnchor.constraint(greaterThanOrEqualToConstant: 38).isActive = true
+
+        let scopeRow = NSStackView(views: [limitScopeLabel, flexibleSpacer(), resetDefaultButton])
+        scopeRow.orientation = .horizontal
+        scopeRow.alignment = .centerY
+        scopeRow.spacing = 8
+        scopeRow.heightAnchor.constraint(greaterThanOrEqualToConstant: 22).isActive = true
+
+        let limitCell = NSStackView(views: [topRow, scopeRow])
+        limitCell.orientation = .vertical
+        limitCell.alignment = .leading
+        limitCell.spacing = 2
+        limitCell.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            topRow.widthAnchor.constraint(equalTo: limitCell.widthAnchor),
+            scopeRow.widthAnchor.constraint(equalTo: limitCell.widthAnchor)
+        ])
+
         let volumeRowView = makeRow([currentVolumeTitleLabel, flexibleSpacer(), currentVolumeValueLabel])
         let deviceRowView = makeRow([deviceTitleLabel, flexibleSpacer(), deviceValueLabel])
-        return makeCard(rows: [limitRowView, volumeRowView, deviceRowView])
+        return makeCard(rows: [limitCell, volumeRowView, deviceRowView])
     }
 
     private func makeOptionsCard() -> CardView {
