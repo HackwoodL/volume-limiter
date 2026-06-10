@@ -11,6 +11,8 @@ gh repo create HackwoodL/homebrew-tap --public
 
 ## Validate locally
 
+If Homebrew reports that Command Line Tools are outdated, update them from System Settings or install the CLT version requested by Homebrew before validating Formula/Cask installation.
+
 ```bash
 swift build
 swift run volume-limiter-tests

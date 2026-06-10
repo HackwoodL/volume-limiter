@@ -2,6 +2,7 @@ class VolumeLimiter < Formula
   desc "Per-user macOS maximum output volume limiter"
   homepage "https://github.com/HackwoodL/volume-limiter"
   url "https://github.com/HackwoodL/volume-limiter/archive/refs/tags/v0.1.0.tar.gz"
+  version "0.1.0"
   sha256 "REPLACE_WITH_SOURCE_TARBALL_SHA256"
   license "MIT"
 
