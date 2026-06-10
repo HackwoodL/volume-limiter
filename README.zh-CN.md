@@ -4,22 +4,17 @@
 
 ![Volume Limiter 系统设置面板截图](docs/screenshots/prefpane-system-settings.zh-CN.png)
 
-Volume Limiter 是一个轻量级 macOS 最大音量限制器。它通过单一的当前用户守护进程监听 Core Audio 输出设备和音量变化，一旦当前输出音量超过你设置的上限，就立即压回上限。CLI 和 GUI 都是瘦客户端，只通过 Unix domain socket 与同一个守护进程通信。
+Volume Limiter 是一个轻量级 macOS 最大音量限制器。只要音量超过你设定的上限，就会被立即压回。你可以通过「系统设置」里的面板，或一个小巧的命令行工具来控制它。
 
 ## 功能
 
-- 事件驱动的 Core Audio 监听；默认不轮询。
-- 当前用户会话内单一守护进程 `volume-limiterd`，随安装自启、空闲 CPU 接近 0%。
-- CLI：`volume-limit`。
-- GUI：集成到 macOS“系统设置”的 ad-hoc 签名 `VolumeLimiter.prefPane`，顶部总开关一键启停封顶。
-- 拖拽安装 DMG：面板内置守护进程和 CLI，首次加载即自动启动服务——双击即可安装。
-- prefPane 可见时自动刷新状态，离开面板后停止刷新。
-- 配置由 daemon 统一持有，CLI 和 GUI 天然同步。
-- 支持“仅耳机输出时生效”模式，覆盖蓝牙耳机、USB/Type-C 耳机等常见耳机输出。
-- 分设备上限：默认上限适用于所有设备，可为特定设备单独设置上限。
-- 支持音量被压回时发送 macOS 通知。
-- 面板内置一键「卸载」按钮，一步移除后台服务、配置和面板本身。
-- 不安装内核扩展、不安装虚拟音频驱动、不依赖任何付费证书。
+- 限制最大输出音量——音量调过上限会被自动压回。
+- 所有设备共用一个默认上限，并可为特定设备单独设置上限。
+- 仅耳机模式：只限制耳机类输出（蓝牙、USB、Type-C 等）。
+- 音量被压回时可发送通知。
+- 系统设置里的图形界面与 `volume-limit` 命令行，始终保持同步。
+- 拖拽安装的 DMG，以及一键卸载。
+- 不安装内核扩展、不安装音频驱动；无需付费的 Apple 证书。
 
 ## 安装
 
@@ -61,15 +56,31 @@ scripts/test-cli-daemon.py
 
 ### Homebrew（计划中，尚未发布）
 
-个人 tap 发布后，以下命令即可使用：
+个人 tap 发布后，一条命令即可**安装并启动**所有东西（这个 cask 携带自包含面板，面板内置后台服务和 CLI）：
 
 ```bash
-brew install HackwoodL/tap/volume-limiter              # CLI + daemon
-brew services start volume-limiter
-brew install --cask HackwoodL/tap/volume-limiter-gui   # prefPane GUI
+brew install --cask HackwoodL/tap/volume-limiter-gui
 ```
 
-> 如果你用 Homebrew 安装，就要**用 Homebrew 卸载**（`brew uninstall` / `brew services stop`）。Homebrew 自己记账，而且守护进程是由独立的 `brew services` agent 拉起的，所以面板里的 **Uninstall** 按钮和下面的终端卸载只适用于 DMG/源码安装，不适用于 Homebrew 安装。
+卸载同样一条命令——停止服务并移除 agent、配置和面板：
+
+```bash
+brew uninstall --cask HackwoodL/tap/volume-limiter-gui
+```
+
+> 用 Homebrew 安装的东西由 Homebrew 管理，所以要用 `brew uninstall` 卸载（上面那一行），而不是面板里的 **Uninstall** 按钮（那个按钮是给 DMG/源码安装用的）。「用什么装就用什么卸」是所有 Homebrew 包的通用规则。
+
+## 图形界面（GUI）
+
+主界面是 **系统设置 ▸ Volume Limiter** 里的面板：
+
+- 顶部总开关，一键启停限制。
+- 默认上限滑块，适用于所有设备。
+- 分设备上限——添加特定设备并各自设置上限。
+- 「仅耳机模式」和「限制时通知」开关。
+- 一键 **Uninstall（卸载）** 按钮。
+
+面板会实时显示当前音量和输出设备；即使关闭面板，后台服务也会持续生效。
 
 ## CLI
 
@@ -113,9 +124,7 @@ rm -rf ~/Library/Application\ Support/VolumeLimiter \
 ### Homebrew（发布后）
 
 ```bash
-brew uninstall --cask volume-limiter-gui || true
-brew services stop volume-limiter || true
-brew uninstall volume-limiter || true
+brew uninstall --cask HackwoodL/tap/volume-limiter-gui
 ```
 
 ## 架构

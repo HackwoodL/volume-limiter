@@ -4,22 +4,17 @@
 
 ![Volume Limiter prefPane in System Settings](docs/screenshots/prefpane-system-settings.png)
 
-Volume Limiter is a lightweight macOS maximum-volume limiter. A single per-user daemon watches the current output device with Core Audio and immediately pushes volume back down when it exceeds your configured limit. The CLI and GUI are thin clients that talk to the same daemon over a Unix domain socket.
+Volume Limiter is a lightweight macOS app that caps your maximum output volume. Whenever the volume goes above the limit you set, it's immediately pushed back down. Control it from a pane in System Settings, or from a small command-line tool.
 
 ## Features
 
-- Event-driven Core Audio monitoring; no default polling loop.
-- Per-user daemon `volume-limiterd` that auto-starts in the background and idles near 0% CPU.
-- CLI: `volume-limit`.
-- GUI: ad-hoc signed `VolumeLimiter.prefPane` for macOS System Settings, with a master switch to turn limiting on/off.
-- Drag-to-install DMG: the pane bundles the daemon and CLI and starts the service on first load — double-click to install.
-- The prefPane auto-refreshes while visible and stops refreshing when you leave it.
-- Shared config owned by the daemon, so the CLI and GUI stay in sync.
-- Optional headphone-only mode for Bluetooth, USB, Type-C, and other headphone-like outputs.
-- Per-device caps: a default cap applies to every device, with optional overrides for specific devices.
-- Optional macOS notification when volume is capped.
-- One-click Uninstall button in the pane that removes the service, config, and pane in one step.
-- No kernel extension, no virtual audio driver, no kext — and no paid certificate.
+- Caps the maximum output volume — turn it up past the limit and it snaps back.
+- A default cap for every device, plus optional per-device caps.
+- Headphone-only mode: only limit headphone-like outputs (Bluetooth, USB, Type-C).
+- Optional notification when the volume is capped.
+- A System Settings GUI and a `volume-limit` command line, always in sync.
+- Drag-to-install DMG and one-click uninstall.
+- No kernel extension and no audio driver; no paid Apple certificate needed.
 
 ## Install
 
@@ -71,19 +66,37 @@ scripts/test-cli-daemon.py
 
 ### Homebrew (planned — not published yet)
 
-Once the personal tap is published, these will work:
+Once the personal tap is published, one command installs **and** starts everything
+(the cask carries the self-contained pane, which bundles the service and CLI):
 
 ```bash
-brew install HackwoodL/tap/volume-limiter              # CLI + daemon
-brew services start volume-limiter
-brew install --cask HackwoodL/tap/volume-limiter-gui   # prefPane GUI
+brew install --cask HackwoodL/tap/volume-limiter-gui
 ```
 
-> If you install with Homebrew, **uninstall with Homebrew** (`brew uninstall` /
-> `brew services stop`). Homebrew tracks its own files and runs the daemon under
-> a separate `brew services` agent, so the in-pane **Uninstall** button and the
-> Terminal uninstall below apply to the DMG/source install, not to a Homebrew
-> one.
+Uninstalling is also one command — it stops the service and removes the agent,
+config, and pane:
+
+```bash
+brew uninstall --cask HackwoodL/tap/volume-limiter-gui
+```
+
+> A Homebrew install is managed by Homebrew, so uninstall it with `brew uninstall`
+> (one line, above) — not the in-pane **Uninstall** button, which is for the
+> DMG/source install. This brew-installed-means-brew-uninstalled rule is how every
+> Homebrew package works.
+
+## GUI
+
+The main interface is a pane in **System Settings ▸ Volume Limiter**:
+
+- A master switch to turn limiting on or off.
+- A default cap slider that applies to every device.
+- Per-device caps — add specific devices and give each its own cap.
+- Toggles for headphone-only mode and limit notifications.
+- A one-click **Uninstall** button.
+
+It shows the current volume and output device live, and the background service
+keeps your cap enforced even when the pane is closed.
 
 ## CLI
 
@@ -130,9 +143,7 @@ rm -rf ~/Library/Application\ Support/VolumeLimiter \
 ### Homebrew (once published)
 
 ```bash
-brew uninstall --cask volume-limiter-gui || true
-brew services stop volume-limiter || true
-brew uninstall volume-limiter || true
+brew uninstall --cask HackwoodL/tap/volume-limiter-gui
 ```
 
 ## Architecture
