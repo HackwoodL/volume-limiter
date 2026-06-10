@@ -1,11 +1,11 @@
 "app.title" = "Volume Limiter";
 "app.subtitle" = "Caps the current macOS output volume through the shared volume-limiterd daemon.";
-"limit.placeholder" = "Limit: --%";
-"limit.value" = "Limit: %d%%";
-"currentVolume.unavailable" = "Current volume: unavailable";
-"currentVolume.value" = "Current volume: %d%%";
-"device.unavailable" = "Device: unavailable";
-"device.value" = "Device: %@";
+"section.options" = "Options";
+"limit.title" = "Limit";
+"currentVolume.title" = "Current volume";
+"device.title" = "Device";
+"percent.value" = "%d%%";
+"percent.placeholder" = "--%";
 "value.unavailable" = "Unavailable";
 "headphoneOnly.checkbox" = "Only limit headphone outputs";
 "launchAtLogin.checkbox" = "Start daemon at login";

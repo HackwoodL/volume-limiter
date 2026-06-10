@@ -8,110 +8,60 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     private var isUpdatingControls = false
     private var refreshTimer: Timer?
 
-    private var limitLabel = NSTextField(labelWithString: localized("limit.placeholder"))
-    private var currentVolumeLabel = NSTextField(labelWithString: localized("currentVolume.unavailable"))
-    private var deviceLabel = NSTextField(labelWithString: localized("device.unavailable"))
-    private var daemonStatusLabel = NSTextField(labelWithString: "")
-    private var diagnosticsLabel = NSTextField(labelWithString: "")
-    private var limitSlider = NSSlider(value: 50, minValue: 0, maxValue: 100, target: nil, action: nil)
-    private var headphoneOnlyButton = NSButton(
-        checkboxWithTitle: localized("headphoneOnly.checkbox"),
-        target: nil,
-        action: nil
-    )
-    private var launchAtLoginButton = NSButton(
-        checkboxWithTitle: localized("launchAtLogin.checkbox"),
-        target: nil,
-        action: nil
-    )
-    private var notifyOnLimitButton = NSButton(
-        checkboxWithTitle: localized("notifyOnLimit.checkbox"),
-        target: nil,
-        action: nil
-    )
+    private let masterSwitch = NSSwitch()
+    private let limitSlider = NSSlider(value: 50, minValue: 0, maxValue: 100, target: nil, action: nil)
+    private let headphoneOnlySwitch = NSSwitch()
+    private let launchAtLoginSwitch = NSSwitch()
+    private let notifyOnLimitSwitch = NSSwitch()
+
+    private let limitTitleLabel = NSTextField(labelWithString: localized("limit.title"))
+    private let limitValueLabel = NSTextField(labelWithString: localized("percent.placeholder"))
+    private let currentVolumeTitleLabel = NSTextField(labelWithString: localized("currentVolume.title"))
+    private let currentVolumeValueLabel = NSTextField(labelWithString: localized("value.unavailable"))
+    private let deviceTitleLabel = NSTextField(labelWithString: localized("device.title"))
+    private let deviceValueLabel = NSTextField(labelWithString: localized("value.unavailable"))
+    private let daemonStatusLabel = NSTextField(labelWithString: "")
+    private let diagnosticsLabel = NSTextField(labelWithString: "")
+
+    private var limitRow: NSView?
 
     public override func loadMainView() -> NSView {
-        let rootView = NSView(frame: NSRect(x: 0, y: 0, width: 600, height: 430))
-        rootView.translatesAutoresizingMaskIntoConstraints = false
+        let rootView = NSView(frame: NSRect(x: 0, y: 0, width: 620, height: 560))
 
-        let title = NSTextField(labelWithString: localized("app.title"))
-        title.font = .systemFont(ofSize: 24, weight: .semibold)
+        configureControls()
 
-        let subtitle = NSTextField(
-            wrappingLabelWithString: localized("app.subtitle")
-        )
-        subtitle.textColor = .secondaryLabelColor
+        let header = makeHeaderCard()
+        let limitCard = makeLimitCard()
+        let optionsCard = makeOptionsCard()
+        let optionsSection = sectionLabel(localized("section.options"))
+        let footer = makeFooter()
 
-        limitSlider.target = self
-        limitSlider.action = #selector(limitSliderChanged(_:))
-        limitSlider.numberOfTickMarks = 11
-        limitSlider.allowsTickMarkValuesOnly = false
-
-        headphoneOnlyButton.target = self
-        headphoneOnlyButton.action = #selector(headphoneOnlyChanged(_:))
-
-        launchAtLoginButton.target = self
-        launchAtLoginButton.action = #selector(launchAtLoginChanged(_:))
-
-        notifyOnLimitButton.target = self
-        notifyOnLimitButton.action = #selector(notifyOnLimitChanged(_:))
-
-        let refreshButton = NSButton(
-            title: localized("refresh.button"),
-            target: self,
-            action: #selector(refreshButtonPressed(_:))
-        )
-        let openCLIHelpButton = NSButton(
-            title: localized("showStartCommand.button"),
-            target: self,
-            action: #selector(showDaemonStartCommand(_:))
-        )
-
-        diagnosticsLabel.textColor = .secondaryLabelColor
-        diagnosticsLabel.lineBreakMode = .byWordWrapping
-        diagnosticsLabel.maximumNumberOfLines = 4
-
-        daemonStatusLabel.lineBreakMode = .byWordWrapping
-        daemonStatusLabel.maximumNumberOfLines = 3
-
-        let limitRow = horizontalStack([
-            limitLabel,
-            limitSlider
+        let outerStack = NSStackView(views: [
+            header,
+            limitCard,
+            optionsSection,
+            optionsCard,
+            footer
         ])
-        limitRow.setCustomSpacing(16, after: limitLabel)
-        limitSlider.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        outerStack.orientation = .vertical
+        outerStack.alignment = .leading
+        outerStack.spacing = 10
+        outerStack.translatesAutoresizingMaskIntoConstraints = false
+        outerStack.setCustomSpacing(18, after: header)
+        outerStack.setCustomSpacing(20, after: limitCard)
+        outerStack.setCustomSpacing(6, after: optionsSection)
+        outerStack.setCustomSpacing(18, after: optionsCard)
 
-        let buttonRow = horizontalStack([
-            refreshButton,
-            openCLIHelpButton
-        ])
-
-        let stack = NSStackView(views: [
-            title,
-            subtitle,
-            separator(),
-            limitRow,
-            currentVolumeLabel,
-            deviceLabel,
-            headphoneOnlyButton,
-            launchAtLoginButton,
-            notifyOnLimitButton,
-            buttonRow,
-            daemonStatusLabel,
-            diagnosticsLabel
-        ])
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 8
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        rootView.addSubview(stack)
+        rootView.addSubview(outerStack)
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 24),
-            stack.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -24),
-            stack.topAnchor.constraint(equalTo: rootView.topAnchor, constant: 24),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: rootView.bottomAnchor, constant: -24),
-            limitSlider.widthAnchor.constraint(greaterThanOrEqualToConstant: 300)
+            outerStack.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 20),
+            outerStack.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -20),
+            outerStack.topAnchor.constraint(equalTo: rootView.topAnchor, constant: 20),
+            outerStack.bottomAnchor.constraint(lessThanOrEqualTo: rootView.bottomAnchor, constant: -20),
+            header.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
+            limitCard.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
+            optionsCard.widthAnchor.constraint(equalTo: outerStack.widthAnchor),
+            footer.widthAnchor.constraint(equalTo: outerStack.widthAnchor)
         ])
 
         mainView = rootView
@@ -149,7 +99,27 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         }
     }
 
-    @objc private func headphoneOnlyChanged(_ sender: NSButton) {
+    @objc private func masterSwitchChanged(_ sender: NSSwitch) {
+        guard !isUpdatingControls else {
+            return
+        }
+
+        do {
+            let response = try send(
+                IPCRequest(
+                    id: requestID(),
+                    cmd: IPCCommand.setEnabled.rawValue,
+                    enabled: sender.state == .on
+                )
+            )
+            apply(response)
+        } catch {
+            showDaemonError(error)
+            refreshStatus()
+        }
+    }
+
+    @objc private func headphoneOnlyChanged(_ sender: NSSwitch) {
         guard !isUpdatingControls else {
             return
         }
@@ -169,7 +139,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         }
     }
 
-    @objc private func launchAtLoginChanged(_ sender: NSButton) {
+    @objc private func launchAtLoginChanged(_ sender: NSSwitch) {
         do {
             try LaunchAgentManager.setEnabled(sender.state == .on)
             daemonStatusLabel.stringValue = sender.state == .on
@@ -177,11 +147,11 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
                 : localized("launchAgent.disabled")
         } catch {
             daemonStatusLabel.stringValue = localizedFormat("launchAgent.error", error.localizedDescription)
-            launchAtLoginButton.state = LaunchAgentManager.isEnabled ? .on : .off
+            launchAtLoginSwitch.state = LaunchAgentManager.isEnabled ? .on : .off
         }
     }
 
-    @objc private func notifyOnLimitChanged(_ sender: NSButton) {
+    @objc private func notifyOnLimitChanged(_ sender: NSSwitch) {
         guard !isUpdatingControls else {
             return
         }
@@ -210,7 +180,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     }
 
     private func refreshStatus() {
-        launchAtLoginButton.state = LaunchAgentManager.isEnabled ? .on : .off
+        launchAtLoginSwitch.state = LaunchAgentManager.isEnabled ? .on : .off
 
         do {
             let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.getStatus.rawValue))
@@ -251,19 +221,23 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
 
         let limit = response.limit ?? Int(limitSlider.doubleValue.rounded())
         limitSlider.integerValue = limit
-        limitLabel.stringValue = localizedFormat("limit.value", limit)
+        limitValueLabel.stringValue = localizedFormat("percent.value", limit)
 
         if let currentVolume = response.currentVolume {
-            currentVolumeLabel.stringValue = localizedFormat("currentVolume.value", currentVolume)
+            currentVolumeValueLabel.stringValue = localizedFormat("percent.value", currentVolume)
         } else {
-            currentVolumeLabel.stringValue = localized("currentVolume.unavailable")
+            currentVolumeValueLabel.stringValue = localized("value.unavailable")
         }
 
-        deviceLabel.stringValue = localizedFormat("device.value", response.deviceName ?? localized("value.unavailable"))
-        headphoneOnlyButton.state = (response.headphoneOnly ?? false) ? .on : .off
-        notifyOnLimitButton.state = (response.notifyOnLimit ?? false) ? .on : .off
+        deviceValueLabel.stringValue = response.deviceName ?? localized("value.unavailable")
+        headphoneOnlySwitch.state = (response.headphoneOnly ?? false) ? .on : .off
+        notifyOnLimitSwitch.state = (response.notifyOnLimit ?? false) ? .on : .off
 
-        let enabledText = (response.enabled ?? false) ? localized("state.on") : localized("state.off")
+        let limiterEnabled = response.enabled ?? false
+        masterSwitch.state = limiterEnabled ? .on : .off
+        updateAvailability(daemonAvailable: true, limiterEnabled: limiterEnabled)
+
+        let enabledText = limiterEnabled ? localized("state.on") : localized("state.off")
         let controlText = (response.volumeControlAvailable ?? false)
             ? localized("state.available")
             : localized("state.unavailable")
@@ -282,28 +256,277 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     }
 
     private func showDaemonError(_ error: Error) {
-        currentVolumeLabel.stringValue = localized("currentVolume.unavailable")
-        deviceLabel.stringValue = localized("device.unavailable")
+        currentVolumeValueLabel.stringValue = localized("value.unavailable")
+        deviceValueLabel.stringValue = localized("value.unavailable")
         diagnosticsLabel.stringValue = localizedFormat("diagnostics.value", error.localizedDescription)
         daemonStatusLabel.stringValue = localized("daemon.notResponding")
+        updateAvailability(daemonAvailable: false, limiterEnabled: masterSwitch.state == .on)
+    }
+
+    private func updateAvailability(daemonAvailable: Bool, limiterEnabled: Bool) {
+        masterSwitch.isEnabled = daemonAvailable
+        headphoneOnlySwitch.isEnabled = daemonAvailable
+        notifyOnLimitSwitch.isEnabled = daemonAvailable
+
+        let limitActive = daemonAvailable && limiterEnabled
+        limitSlider.isEnabled = limitActive
+        limitRow?.alphaValue = limitActive ? 1.0 : 0.45
     }
 
     private func requestID() -> String {
         UUID().uuidString
     }
 
-    private func horizontalStack(_ views: [NSView]) -> NSStackView {
-        let stack = NSStackView(views: views)
-        stack.orientation = .horizontal
-        stack.alignment = .centerY
-        stack.spacing = 8
-        return stack
+    private func configureControls() {
+        limitSlider.target = self
+        limitSlider.action = #selector(limitSliderChanged(_:))
+        limitSlider.numberOfTickMarks = 11
+        limitSlider.allowsTickMarkValuesOnly = false
+        limitSlider.controlSize = .small
+        limitSlider.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        limitSlider.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        masterSwitch.target = self
+        masterSwitch.action = #selector(masterSwitchChanged(_:))
+        masterSwitch.setContentHuggingPriority(.required, for: .horizontal)
+
+        headphoneOnlySwitch.target = self
+        headphoneOnlySwitch.action = #selector(headphoneOnlyChanged(_:))
+        launchAtLoginSwitch.target = self
+        launchAtLoginSwitch.action = #selector(launchAtLoginChanged(_:))
+        notifyOnLimitSwitch.target = self
+        notifyOnLimitSwitch.action = #selector(notifyOnLimitChanged(_:))
+
+        for label in [limitTitleLabel, currentVolumeTitleLabel, deviceTitleLabel] {
+            label.font = .systemFont(ofSize: 13)
+            label.setContentHuggingPriority(.required, for: .horizontal)
+        }
+        for label in [limitValueLabel, currentVolumeValueLabel, deviceValueLabel] {
+            label.font = .systemFont(ofSize: 13)
+            label.alignment = .right
+            label.textColor = .secondaryLabelColor
+            label.setContentHuggingPriority(.required, for: .horizontal)
+            label.widthAnchor.constraint(greaterThanOrEqualToConstant: 48).isActive = true
+        }
+
+        daemonStatusLabel.font = .systemFont(ofSize: 11)
+        daemonStatusLabel.textColor = .secondaryLabelColor
+        daemonStatusLabel.lineBreakMode = .byWordWrapping
+        daemonStatusLabel.maximumNumberOfLines = 3
+
+        diagnosticsLabel.font = .systemFont(ofSize: 11)
+        diagnosticsLabel.textColor = .tertiaryLabelColor
+        diagnosticsLabel.lineBreakMode = .byWordWrapping
+        diagnosticsLabel.maximumNumberOfLines = 4
+    }
+
+    private func makeHeaderCard() -> CardView {
+        let icon = NSImageView()
+        icon.translatesAutoresizingMaskIntoConstraints = false
+        if let base = NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: nil) {
+            let configuration = NSImage.SymbolConfiguration(pointSize: 22, weight: .semibold)
+            icon.image = base.withSymbolConfiguration(configuration) ?? base
+            icon.contentTintColor = .controlAccentColor
+        }
+        icon.setContentHuggingPriority(.required, for: .horizontal)
+        NSLayoutConstraint.activate([
+            icon.widthAnchor.constraint(equalToConstant: 30),
+            icon.heightAnchor.constraint(equalToConstant: 30)
+        ])
+
+        let titleLabel = NSTextField(labelWithString: localized("app.title"))
+        titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
+
+        let subtitleLabel = NSTextField(wrappingLabelWithString: localized("app.subtitle"))
+        subtitleLabel.font = .systemFont(ofSize: 11)
+        subtitleLabel.textColor = .secondaryLabelColor
+        subtitleLabel.maximumNumberOfLines = 2
+        subtitleLabel.preferredMaxLayoutWidth = 420
+        subtitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        let textStack = NSStackView(views: [titleLabel, subtitleLabel])
+        textStack.orientation = .vertical
+        textStack.alignment = .leading
+        textStack.spacing = 2
+        textStack.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        textStack.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        let row = NSStackView(views: [icon, textStack, masterSwitch])
+        row.orientation = .horizontal
+        row.alignment = .centerY
+        row.distribution = .fill
+        row.spacing = 12
+        row.translatesAutoresizingMaskIntoConstraints = false
+
+        let card = CardView()
+        card.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(row)
+        NSLayoutConstraint.activate([
+            row.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+            row.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
+            row.topAnchor.constraint(equalTo: card.topAnchor, constant: 14),
+            row.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -14)
+        ])
+        return card
+    }
+
+    private func makeLimitCard() -> CardView {
+        let limitRowView = makeRow([limitTitleLabel, limitSlider, limitValueLabel])
+        limitRow = limitRowView
+        let volumeRowView = makeRow([currentVolumeTitleLabel, flexibleSpacer(), currentVolumeValueLabel])
+        let deviceRowView = makeRow([deviceTitleLabel, flexibleSpacer(), deviceValueLabel])
+        return makeCard(rows: [limitRowView, volumeRowView, deviceRowView])
+    }
+
+    private func makeOptionsCard() -> CardView {
+        let headphoneRow = makeRow([
+            optionLabel(localized("headphoneOnly.checkbox")),
+            flexibleSpacer(),
+            headphoneOnlySwitch
+        ])
+        let launchRow = makeRow([
+            optionLabel(localized("launchAtLogin.checkbox")),
+            flexibleSpacer(),
+            launchAtLoginSwitch
+        ])
+        let notifyRow = makeRow([
+            optionLabel(localized("notifyOnLimit.checkbox")),
+            flexibleSpacer(),
+            notifyOnLimitSwitch
+        ])
+        return makeCard(rows: [headphoneRow, launchRow, notifyRow])
+    }
+
+    private func makeFooter() -> NSView {
+        let refreshButton = NSButton(
+            title: localized("refresh.button"),
+            target: self,
+            action: #selector(refreshButtonPressed(_:))
+        )
+        refreshButton.bezelStyle = .rounded
+
+        let openCLIHelpButton = NSButton(
+            title: localized("showStartCommand.button"),
+            target: self,
+            action: #selector(showDaemonStartCommand(_:))
+        )
+        openCLIHelpButton.bezelStyle = .rounded
+
+        let buttonRow = NSStackView(views: [refreshButton, openCLIHelpButton, flexibleSpacer()])
+        buttonRow.orientation = .horizontal
+        buttonRow.alignment = .centerY
+        buttonRow.spacing = 10
+
+        let footer = NSStackView(views: [buttonRow, daemonStatusLabel, diagnosticsLabel])
+        footer.orientation = .vertical
+        footer.alignment = .leading
+        footer.spacing = 8
+        footer.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            buttonRow.widthAnchor.constraint(equalTo: footer.widthAnchor),
+            daemonStatusLabel.widthAnchor.constraint(equalTo: footer.widthAnchor),
+            diagnosticsLabel.widthAnchor.constraint(equalTo: footer.widthAnchor)
+        ])
+        return footer
+    }
+
+    private func optionLabel(_ text: String) -> NSTextField {
+        let label = NSTextField(labelWithString: text)
+        label.font = .systemFont(ofSize: 13)
+        label.lineBreakMode = .byTruncatingTail
+        return label
+    }
+
+    private func sectionLabel(_ text: String) -> NSTextField {
+        let label = NSTextField(labelWithString: text)
+        label.font = .systemFont(ofSize: 12, weight: .semibold)
+        label.textColor = .secondaryLabelColor
+        return label
+    }
+
+    private func makeCard(rows: [NSView]) -> CardView {
+        let card = CardView()
+        card.translatesAutoresizingMaskIntoConstraints = false
+
+        let stack = NSStackView()
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 0
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -16),
+            stack.topAnchor.constraint(equalTo: card.topAnchor, constant: 2),
+            stack.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -2)
+        ])
+
+        for (index, row) in rows.enumerated() {
+            if index > 0 {
+                let line = separator()
+                stack.addArrangedSubview(line)
+                NSLayoutConstraint.activate([
+                    line.leadingAnchor.constraint(equalTo: stack.leadingAnchor),
+                    line.trailingAnchor.constraint(equalTo: stack.trailingAnchor)
+                ])
+            }
+            stack.addArrangedSubview(row)
+            NSLayoutConstraint.activate([
+                row.leadingAnchor.constraint(equalTo: stack.leadingAnchor),
+                row.trailingAnchor.constraint(equalTo: stack.trailingAnchor)
+            ])
+        }
+        return card
+    }
+
+    private func makeRow(_ views: [NSView]) -> NSView {
+        let row = NSStackView(views: views)
+        row.orientation = .horizontal
+        row.alignment = .centerY
+        row.distribution = .fill
+        row.spacing = 12
+        row.translatesAutoresizingMaskIntoConstraints = false
+        row.heightAnchor.constraint(greaterThanOrEqualToConstant: 40).isActive = true
+        return row
+    }
+
+    private func flexibleSpacer() -> NSView {
+        let spacer = NSView()
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+        spacer.setContentHuggingPriority(NSLayoutConstraint.Priority(1), for: .horizontal)
+        spacer.setContentCompressionResistancePriority(NSLayoutConstraint.Priority(1), for: .horizontal)
+        return spacer
     }
 
     private func separator() -> NSBox {
         let box = NSBox()
         box.boxType = .separator
+        box.translatesAutoresizingMaskIntoConstraints = false
         return box
+    }
+}
+
+private final class CardView: NSView {
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override var wantsUpdateLayer: Bool {
+        true
+    }
+
+    override func updateLayer() {
+        layer?.cornerRadius = 10
+        layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        layer?.borderWidth = 1
+        layer?.borderColor = NSColor.separatorColor.cgColor
     }
 }
 
