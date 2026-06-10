@@ -17,6 +17,7 @@ Volume Limiter is a lightweight macOS maximum-volume limiter. A single per-user 
 - Optional headphone-only mode for Bluetooth, USB, Type-C, and other headphone-like outputs.
 - Per-device caps: a default cap applies to every device, with optional overrides for specific devices.
 - Optional macOS notification when volume is capped.
+- One-click Uninstall button in the pane that removes the service, config, and pane in one step.
 - No kernel extension, no virtual audio driver, no kext — and no paid certificate.
 
 ## Install
@@ -110,9 +111,16 @@ Start it from System Settings > Volume Limiter, or with Homebrew: brew services 
 
 ## Uninstall
 
-### Local install
+### Easiest: the Uninstall button (GUI)
 
-Stop the daemon and remove everything it installed:
+Open System Settings ▸ Volume Limiter and click **Uninstall** at the bottom of
+the pane. It stops the background service and removes the LaunchAgent, the saved
+configuration, and the preference pane itself in one step. Quit and reopen
+System Settings afterwards to clear it from the sidebar.
+
+### Local install (Terminal)
+
+Equivalent to the button, if you prefer the command line:
 
 ```bash
 launchctl bootout gui/$(id -u)/com.hackwoodl.volumelimiter 2>/dev/null || true
