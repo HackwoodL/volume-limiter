@@ -99,6 +99,8 @@ Start it with: brew services start volume-limiter
 | 默认输出设备状态 | daemon 可读取真实设备状态 | 成功，设备为 `MacBook Air扬声器` |
 | 音量封顶业务逻辑 | 超过 limit 时回压到 limit | 使用 fake audio adapter 自检通过 |
 | 音量变化回调 | 回调触发后立即回压 | 使用 fake audio adapter 自检通过 |
+| 程序化触发回压延迟 | 设置 limit 20%，脚本触发到 30%，目标 `<100ms` | `clamp-latency-ms=9.66`，通过 |
+| 键盘音量键回压延迟 | 设置 limit 20%，人工按音量增大键，目标 `<100ms` | `clamp-latency-ms=5.06`，通过 |
 | Bluetooth-only | 非蓝牙跳过，蓝牙设备生效 | 使用 fake audio adapter 自检通过 |
 | 不支持音量控制诊断 | status 暴露 diagnostics | 代码路径已实现；真实硬件未覆盖 |
 
@@ -106,7 +108,6 @@ Start it with: brew services start volume-limiter
 
 | 项目 | 未执行原因 | 手动验证命令/步骤 |
 | --- | --- | --- |
-| 键盘音量键回压延迟 `<100ms` | 需要人按键和延迟采样工具；当前未伪造结果 | 启动 daemon，设置低上限，用键盘音量键调高，记录事件到回压的时间 |
 | 蓝牙连接/断开/重连 | 需要真实蓝牙耳机交互 | 连接、断开、重连蓝牙耳机后运行 `volume-limit status` 并观察是否立即封顶 |
 | HDMI/AirPlay/aggregate device | 需要对应外设 | 切换输出设备后运行 `volume-limit status` 查看 diagnostics |
 
