@@ -13,7 +13,6 @@
 "percent.placeholder" = "--%";
 "value.unavailable" = "Unavailable";
 "headphoneOnly.checkbox" = "Only limit headphone outputs";
-"launchAtLogin.checkbox" = "Start daemon at login";
 "notifyOnLimit.checkbox" = "Notify when volume is limited";
 "launchAgent.error" = "LaunchAgent error: %@";
 "daemon.startHint" = "Volume Limiter needs its background service running to cap the volume.";

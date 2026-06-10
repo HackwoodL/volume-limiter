@@ -165,11 +165,13 @@ docs/screenshots/prefpane-system-settings.png
 
 prefPane UI 已包含：
 
-- 音量上限滑块，修改后通过 IPC 调用 `setLimit`。
-- 当前音量显示，通过 IPC 读取 daemon status。
-- “Only limit headphone outputs” 开关，通过 IPC 调用 `setHeadphoneOnly`。
-- “Start daemon at login” 开关，通过同一 LaunchAgent label `com.hackwoodl.volumelimiter` 调用 `launchctl` 管理。
-- “Notify when volume is limited” 开关，通过 IPC 调用 `setNotifyOnLimit`。
+- 顶部「限制器总开关」，通过 IPC 调用 `setEnabled`。
+- 「默认上限」滑块,修改后通过 IPC 调用 `setLimit`（默认上限适用于所有设备）。
+- 当前音量与当前设备显示，通过 IPC 读取 daemon status。
+- 「仅限制耳机输出设备」开关，通过 IPC 调用 `setHeadphoneOnly`。
+- 「音量被限制时通知」开关，通过 IPC 调用 `setNotifyOnLimit`。
+- 「分设备上限」总开关（`setDeviceLimitsEnabled`）+ 添加设备下拉 / 单设备滑块 / 移除（`setDeviceLimit` / `removeDeviceLimit`）。
+- 守护进程未运行时显示警告卡与「启动」按钮，经 LaunchAgent label `com.hackwoodl.volumelimiter` 调 `launchctl` 拉起（守护进程作为后台基础设施，由安装器默认配置为开机自启，不再是用户开关）。
 
 ## 6. 资源占用
 

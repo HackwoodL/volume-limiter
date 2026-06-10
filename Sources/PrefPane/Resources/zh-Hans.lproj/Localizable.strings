@@ -13,7 +13,6 @@
 "percent.placeholder" = "--%";
 "value.unavailable" = "不可用";
 "headphoneOnly.checkbox" = "仅限制耳机输出设备";
-"launchAtLogin.checkbox" = "登录时启动守护进程";
 "notifyOnLimit.checkbox" = "音量被限制时通知";
 "launchAgent.error" = "LaunchAgent 错误：%@";
 "daemon.startHint" = "Volume Limiter 需要后台服务运行才能限制音量。";

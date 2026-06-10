@@ -11,7 +11,6 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     private let masterSwitch = NSSwitch()
     private let limitSlider = NSSlider(value: 50, minValue: 0, maxValue: 100, target: nil, action: nil)
     private let headphoneOnlySwitch = NSSwitch()
-    private let launchAtLoginSwitch = NSSwitch()
     private let notifyOnLimitSwitch = NSSwitch()
 
     private let limitTitleLabel = NSTextField(labelWithString: localized("limit.title"))
@@ -164,10 +163,6 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         }
     }
 
-    @objc private func launchAtLoginChanged(_ sender: NSSwitch) {
-        setLaunchAgentEnabled(sender.state == .on, control: sender)
-    }
-
     @objc private func startDaemonPressed(_ sender: NSButton) {
         setLaunchAgentEnabled(true, control: sender)
     }
@@ -307,7 +302,6 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
     }
 
     private func refreshStatus() {
-        launchAtLoginSwitch.state = LaunchAgentManager.isEnabled ? .on : .off
         do {
             let response = try send(IPCRequest(id: requestID(), cmd: IPCCommand.getStatus.rawValue))
             apply(response)
@@ -450,8 +444,6 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
 
         headphoneOnlySwitch.target = self
         headphoneOnlySwitch.action = #selector(headphoneOnlyChanged(_:))
-        launchAtLoginSwitch.target = self
-        launchAtLoginSwitch.action = #selector(launchAtLoginChanged(_:))
         notifyOnLimitSwitch.target = self
         notifyOnLimitSwitch.action = #selector(notifyOnLimitChanged(_:))
         deviceEnableSwitch.target = self
@@ -719,17 +711,12 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             flexibleSpacer(),
             headphoneOnlySwitch
         ])
-        let launchRow = makeRow([
-            optionLabel(localized("launchAtLogin.checkbox")),
-            flexibleSpacer(),
-            launchAtLoginSwitch
-        ])
         let notifyRow = makeRow([
             optionLabel(localized("notifyOnLimit.checkbox")),
             flexibleSpacer(),
             notifyOnLimitSwitch
         ])
-        return makeCard(rows: [headphoneRow, launchRow, notifyRow])
+        return makeCard(rows: [headphoneRow, notifyRow])
     }
 
     private func makeWarningCard() -> NSView {
