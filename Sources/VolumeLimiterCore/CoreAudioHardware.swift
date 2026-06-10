@@ -306,13 +306,13 @@ public final class CoreAudioHardware: AudioHardwareControlling {
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
-        var name: CFString = "Unknown Output Device" as CFString
-        var size = UInt32(MemoryLayout<CFString>.size)
+        var name: Unmanaged<CFString>?
+        var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
         let status = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &name)
-        guard status == noErr else {
+        guard status == noErr, let name else {
             return "Unknown Output Device"
         }
-        return name as String
+        return name.takeRetainedValue() as String
     }
 
     private func transportType(deviceID: AudioDeviceIdentifier) -> UInt32? {
