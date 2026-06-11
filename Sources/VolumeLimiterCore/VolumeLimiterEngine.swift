@@ -201,6 +201,32 @@ public final class VolumeLimiterEngine {
         return statusLocked()
     }
 
+    /// Decides whether a hardware "volume up" key press should be swallowed by the
+    /// key interceptor instead of reaching the system.
+    ///
+    /// Reactively clamping the volume after the fact cannot stop the audible burst
+    /// on some Bluetooth devices: macOS's volume-key handler keeps its own counter
+    /// that runs away to 100% during rapid presses, driving the device past the cap
+    /// for a few milliseconds on every press. The only reliable fix is to stop the
+    /// key from reaching that handler once we are already at the cap, so the counter
+    /// never climbs. Returns true when we are actively capping the current device
+    /// and the volume is already at (or above) the cap.
+    public func shouldSwallowVolumeUp() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let enforcement = activeEnforcement else {
+            return false
+        }
+        let current = audio.currentOutputVolumePercent(deviceID: enforcement.deviceID) ?? enforcement.limit
+        guard current >= enforcement.limit else {
+            return false
+        }
+        if current > enforcement.limit {
+            try? audio.setOutputVolume(deviceID: enforcement.deviceID, percent: enforcement.limit)
+        }
+        return true
+    }
+
     private func handleAudioEvent(reason: String) {
         lock.lock()
         defer { lock.unlock() }

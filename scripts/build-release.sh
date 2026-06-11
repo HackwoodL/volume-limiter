@@ -86,6 +86,7 @@ build_arch() {
     "$arch_dir/core"/*.o \
     "$arch_dir/ipc"/*.o \
     "$ROOT/Sources/volume-limiterd/AppleScriptVolumeLimitNotifier.swift" \
+    "$ROOT/Sources/volume-limiterd/VolumeKeyInterceptor.swift" \
     "$ROOT/Sources/volume-limiterd/main.swift" \
     -o "$arch_dir/bin/volume-limiterd"
 }

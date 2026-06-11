@@ -50,6 +50,7 @@ vl_build_cli_daemon() {
       -I "$d/ipc" -I "$d/core" \
       "$d/core"/*.o "$d/ipc"/*.o \
       "$root/Sources/volume-limiterd/AppleScriptVolumeLimitNotifier.swift" \
+      "$root/Sources/volume-limiterd/VolumeKeyInterceptor.swift" \
       "$root/Sources/volume-limiterd/main.swift" \
       -o "$d/bin/volume-limiterd"
   done

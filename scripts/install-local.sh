@@ -21,7 +21,10 @@ PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 SOCKET="/tmp/volume-limiter-$UID_NUM.sock"
 
 echo "==> Building release binaries"
-swift build -c release --product volume-limiterd --product volume-limit
+# Build products in separate invocations: `swift build` honors only the last
+# --product flag, so passing both at once silently skips the daemon.
+swift build -c release --product volume-limiterd
+swift build -c release --product volume-limit
 
 echo "==> Stopping any running daemon"
 launchctl bootout "gui/$UID_NUM/$LABEL" 2>/dev/null || true

@@ -17,6 +17,10 @@ struct VolumeLimiterTestRunner {
         try suite.run("Core rejects invalid limit", testInvalidLimitIsRejected)
         try suite.run("Core disabled limiter does not clamp", testDisabledLimiterDoesNotClamp)
         try suite.run("Core rapid volume changes each clamp via fast path", testRapidVolumeChangesClampEachTime)
+        try suite.run("Core swallows volume-up key at the cap", testInterceptorSwallowsVolumeUpAtCap)
+        try suite.run("Core passes volume-up key below the cap", testInterceptorPassesVolumeUpBelowCap)
+        try suite.run("Core passes volume-up key when disabled", testInterceptorPassesVolumeUpWhenDisabled)
+        try suite.run("Core re-asserts cap when over before swallowing", testInterceptorReassertsCapWhenOver)
         try suite.run("Core notifies when limit is enforced", testNotifyOnLimit)
         try suite.run("Core notify is throttled under rapid clamps", testNotifyThrottledUnderRapidClamps)
         try suite.run("Core does not notify when notify disabled", testNotifyDisabled)
@@ -191,6 +195,51 @@ private func testDisabledLimiterDoesNotClamp() throws {
 
     try expectEqual(audio.setVolumeCalls, [])
     try expectEqual(audio.volume, 80)
+}
+
+private func testInterceptorSwallowsVolumeUpAtCap() throws {
+    let audio = FakeAudioHardware(volume: 80)
+    let config = try VolumeLimiterConfig(limit: 40)
+    let engine = try makeEngine(audio: audio, config: config)
+
+    try engine.start() // clamps to 40; now sitting at the cap
+
+    try expectTrue(engine.shouldSwallowVolumeUp(), "at the cap the volume-up key must be swallowed")
+}
+
+private func testInterceptorPassesVolumeUpBelowCap() throws {
+    let audio = FakeAudioHardware(volume: 80)
+    let config = try VolumeLimiterConfig(limit: 40)
+    let engine = try makeEngine(audio: audio, config: config)
+
+    try engine.start()
+    audio.volume = 25 // below the cap
+
+    try expectEqual(engine.shouldSwallowVolumeUp(), false)
+}
+
+private func testInterceptorPassesVolumeUpWhenDisabled() throws {
+    let audio = FakeAudioHardware(volume: 80)
+    let config = try VolumeLimiterConfig(enabled: false, limit: 40)
+    let engine = try makeEngine(audio: audio, config: config)
+
+    try engine.start()
+
+    try expectEqual(engine.shouldSwallowVolumeUp(), false)
+}
+
+private func testInterceptorReassertsCapWhenOver() throws {
+    let audio = FakeAudioHardware(volume: 80)
+    let config = try VolumeLimiterConfig(limit: 40)
+    let engine = try makeEngine(audio: audio, config: config)
+
+    try engine.start()
+    audio.setVolumeCalls.removeAll()
+    audio.volume = 90 // a spike sneaks above the cap at decision time
+
+    try expectTrue(engine.shouldSwallowVolumeUp(), "over the cap still swallows")
+    try expectEqual(audio.volume, 40)
+    try expectEqual(audio.setVolumeCalls, [40])
 }
 
 private func testRapidVolumeChangesClampEachTime() throws {

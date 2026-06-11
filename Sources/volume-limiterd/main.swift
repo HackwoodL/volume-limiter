@@ -32,6 +32,11 @@ do {
     exit(1)
 }
 
+#if os(macOS)
+let volumeKeyInterceptor = VolumeKeyInterceptor(engine: engine)
+volumeKeyInterceptor.start()
+#endif
+
 let shutdownSemaphore = DispatchSemaphore(value: 0)
 installSignalHandler(SIGINT, semaphore: shutdownSemaphore)
 installSignalHandler(SIGTERM, semaphore: shutdownSemaphore)
