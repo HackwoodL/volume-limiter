@@ -1,9 +1,10 @@
 # Publishing checklist
 
-Replace repository and tap names if you choose different GitHub names. Publishing
-is not done yet — this is the plan for when you are ready.
+Replace repository and tap names if you choose different GitHub names. The repos
+below already exist (`HackwoodL/volume-limiter` and `HackwoodL/homebrew-tap`) and
+v0.1.0 / v0.1.1 are published; this is the recurring process for each new version.
 
-## One-time GitHub setup
+## One-time GitHub setup (already done)
 
 ```bash
 gh repo create HackwoodL/volume-limiter --public --source=. --remote=origin --push
@@ -13,28 +14,32 @@ gh repo create HackwoodL/homebrew-tap --public
 ## Validate locally
 
 ```bash
+VERSION=0.1.1                       # the version you are about to cut
 swift build
 swift run volume-limiter-tests
 scripts/test-cli-daemon.py
 scripts/test-launch-agent.sh
-scripts/build-dmg.sh 0.1.0        # -> .build/dmg/VolumeLimiter-0.1.0.dmg
+scripts/build-dmg.sh "$VERSION"     # -> .build/dmg/VolumeLimiter-$VERSION.dmg
 ```
+
+Bump `CFBundleShortVersionString` (and `CFBundleVersion`) in
+`Sources/PrefPane/Info.plist` to match before tagging.
 
 Then install the built DMG and confirm the full flow: double-click the pane, let
 System Settings install it, verify the service starts on its own, and check that
 the in-pane **Uninstall** button removes everything.
 
-## Publish v0.1.0
+## Cut a release
 
 ```bash
 git status --short
-git tag v0.1.0
 git push origin main
-git push origin v0.1.0
+git tag "v$VERSION"
+git push origin "v$VERSION"
 ```
 
-Attach `VolumeLimiter-0.1.0.dmg` to the GitHub Release — the cask downloads it.
-(`release.yml` does this automatically on a `v*` tag via `scripts/build-dmg.sh`.)
+`release.yml` runs on the `v*` tag: it builds the DMG via `scripts/build-dmg.sh`,
+writes `SHA256SUMS`, and attaches both to the GitHub Release automatically.
 
 ## Update the Homebrew tap
 
