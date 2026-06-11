@@ -153,6 +153,22 @@ public final class CoreAudioHardware: AudioHardwareControlling {
         }
     }
 
+    /// Fast path: read just the output volume with the fewest possible Core Audio
+    /// calls (main scalar if present, otherwise the channel average). Used on every
+    /// volume-change notification so clamping keeps up with rapid volume-key presses.
+    public func currentOutputVolumePercent(deviceID: AudioDeviceIdentifier) -> Int? {
+        if let scalar = try? readVolumeScalar(deviceID: deviceID, element: kAudioObjectPropertyElementMain) {
+            return percent(from: scalar)
+        }
+        let scalars = channelElementsWithVolume(deviceID: deviceID).compactMap { element in
+            try? readVolumeScalar(deviceID: deviceID, element: element)
+        }
+        guard !scalars.isEmpty else {
+            return nil
+        }
+        return percent(from: scalars.reduce(Float32(0), +) / Float32(scalars.count))
+    }
+
     public func startMonitoring(
         defaultDeviceChanged: @escaping (AudioDeviceIdentifier) -> Void,
         volumeChanged: @escaping (AudioDeviceIdentifier) -> Void
@@ -475,6 +491,10 @@ public final class CoreAudioHardware: AudioHardwareControlling {
 
     public func outputDeviceList() throws -> [OutputDeviceRef] {
         throw AudioHardwareError(operation: "Core Audio", message: "Core Audio is only available on macOS.")
+    }
+
+    public func currentOutputVolumePercent(deviceID: AudioDeviceIdentifier) -> Int? {
+        nil
     }
 
     public func setOutputVolume(deviceID: AudioDeviceIdentifier, percent: Int) throws {

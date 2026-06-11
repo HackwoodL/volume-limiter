@@ -84,6 +84,10 @@ public protocol AudioHardwareControlling: AnyObject {
     func defaultOutputDevice() throws -> AudioDeviceIdentifier
     func outputDeviceSnapshot(for deviceID: AudioDeviceIdentifier) throws -> OutputDeviceSnapshot
     func outputDeviceList() throws -> [OutputDeviceRef]
+    /// Lightweight read of just the output volume (no name/UID/transport), for the
+    /// hot path that must keep up with rapid volume-key presses. Returns nil if
+    /// the volume can't be read.
+    func currentOutputVolumePercent(deviceID: AudioDeviceIdentifier) -> Int?
     func setOutputVolume(deviceID: AudioDeviceIdentifier, percent: Int) throws
     func startMonitoring(
         defaultDeviceChanged: @escaping (AudioDeviceIdentifier) -> Void,

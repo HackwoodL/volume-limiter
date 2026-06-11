@@ -16,7 +16,9 @@ struct VolumeLimiterTestRunner {
         try suite.run("Core headphone-only clamps wired headphones", testHeadphoneOnlyClampsWiredHeadphones)
         try suite.run("Core rejects invalid limit", testInvalidLimitIsRejected)
         try suite.run("Core disabled limiter does not clamp", testDisabledLimiterDoesNotClamp)
+        try suite.run("Core rapid volume changes each clamp via fast path", testRapidVolumeChangesClampEachTime)
         try suite.run("Core notifies when limit is enforced", testNotifyOnLimit)
+        try suite.run("Core notify is throttled under rapid clamps", testNotifyThrottledUnderRapidClamps)
         try suite.run("Core does not notify when notify disabled", testNotifyDisabled)
         try suite.run("Core config store persists settings", testConfigStorePersistsSettings)
         try suite.run("Core per-device override clamps to device limit", testPerDeviceOverrideClampsToDeviceLimit)
@@ -189,6 +191,39 @@ private func testDisabledLimiterDoesNotClamp() throws {
 
     try expectEqual(audio.setVolumeCalls, [])
     try expectEqual(audio.volume, 80)
+}
+
+private func testRapidVolumeChangesClampEachTime() throws {
+    let audio = FakeAudioHardware(volume: 20)
+    let config = try VolumeLimiterConfig(limit: 40)
+    let engine = try makeEngine(audio: audio, config: config)
+
+    try engine.start()
+
+    // Simulate spamming volume-up: each press bumps the volume; the fast path
+    // must clamp every one back to 40 (never letting it stack toward 100).
+    for bump in [55, 62, 70, 90] {
+        audio.emitVolumeChange(volume: bump)
+    }
+
+    try expectEqual(audio.volume, 40)
+    try expectEqual(audio.setVolumeCalls, [40, 40, 40, 40])
+}
+
+private func testNotifyThrottledUnderRapidClamps() throws {
+    let audio = FakeAudioHardware(volume: 20)
+    let notifier = FakeNotifier()
+    let config = try VolumeLimiterConfig(limit: 40, notifyOnLimit: true)
+    let engine = try makeEngine(audio: audio, config: config, notifier: notifier)
+
+    try engine.start()
+    for bump in [60, 70, 80, 95] {
+        audio.emitVolumeChange(volume: bump)
+    }
+
+    // Many clamps, but notifications are throttled to avoid a flood.
+    try expectEqual(audio.volume, 40)
+    try expectEqual(notifier.events.count, 1)
 }
 
 private func testNotifyOnLimit() throws {
@@ -701,6 +736,10 @@ private final class FakeAudioHardware: AudioHardwareControlling {
 
     func outputDeviceList() throws -> [OutputDeviceRef] {
         deviceList ?? [OutputDeviceRef(uid: uid ?? "uid-fake", name: deviceName, isHeadphoneOutput: isHeadphoneOutput)]
+    }
+
+    func currentOutputVolumePercent(deviceID: AudioDeviceIdentifier) -> Int? {
+        volume
     }
 
     func setOutputVolume(deviceID: AudioDeviceIdentifier, percent: Int) throws {
