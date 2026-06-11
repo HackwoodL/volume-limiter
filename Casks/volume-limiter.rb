@@ -1,7 +1,7 @@
 ####
 # Homebrew Cask for the GUI install.
 #
-# The url/sha256 point at the published v0.1.1 GitHub Release. Verified end to
+# The url/sha256 point at the published v0.1.2 GitHub Release. Verified end to
 # end on macOS 26: `brew install --cask` installs the self-contained pane and
 # starts the LaunchAgent; `brew uninstall --cask` stops the service and removes
 # everything.
@@ -10,8 +10,8 @@
 # volume-limiterd + volume-limit), so no separate formula is needed.
 ####
 cask "volume-limiter" do
-  version "0.1.1"
-  sha256 "338e99ec9c724a73e147d8dc5d6c267b8f9a684ffa1e4ebdb32ebe4c6d4938e3"
+  version "0.1.2"
+  sha256 "6f1636ec1a3a0a9d731a433e6b6631e8d977fe47ea18350c250352600c380862"
 
   url "https://github.com/HackwoodL/volume-limiter/releases/download/v#{version}/VolumeLimiter-#{version}.dmg"
   name "Volume Limiter"
