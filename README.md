@@ -20,6 +20,7 @@ Volume Limiter is a lightweight macOS app that caps your maximum output volume. 
 - A default cap for every device, plus optional per-device caps.
 - Headphone-only mode: only limit headphone-like outputs (Bluetooth, USB, Type-C).
 - Optional notification when the volume is capped.
+- Stops the Bluetooth volume-key "burst" (rapid presses briefly blasting to ~100%) by intercepting the volume-up key at the cap — needs Accessibility permission.
 - A System Settings GUI and a `volume-limit` command line, always in sync.
 
 ## Install
@@ -90,6 +91,26 @@ The main interface is a pane in **System Settings ▸ Volume Limiter**:
 
 It shows the current volume and output device live, and the background service
 keeps your cap enforced even when the pane is closed.
+
+### Bluetooth volume-burst protection (Accessibility)
+
+On some Bluetooth headphones, *rapidly* pressing volume-up can momentarily blast
+the volume to ~100% before the cap is re-applied — an audible "burst". That is
+macOS's own volume-key handling racing ahead of any after-the-fact correction, so
+lowering the volume reactively can't fully prevent it.
+
+To stop it at the source, Volume Limiter intercepts the volume-up key once you're
+already at the cap, so the volume never overshoots. This needs **Accessibility**
+permission:
+
+1. Open **System Settings ▸ Privacy & Security ▸ Accessibility** (when permission
+   is missing, the Volume Limiter pane shows a one-click button that opens it).
+2. Enable **volume-limiterd**.
+
+Protection turns on within a few seconds. If it doesn't activate, log out and back
+in (or restart) once so the background service picks up the permission. Without
+it, Volume Limiter still caps the volume reactively — only the rapid-press burst
+on Bluetooth remains.
 
 ## CLI
 
