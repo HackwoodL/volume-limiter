@@ -21,6 +21,7 @@ struct VolumeLimiterTestRunner {
         try suite.run("Core passes volume-up key below the cap", testInterceptorPassesVolumeUpBelowCap)
         try suite.run("Core passes volume-up key when disabled", testInterceptorPassesVolumeUpWhenDisabled)
         try suite.run("Core re-asserts cap when over before swallowing", testInterceptorReassertsCapWhenOver)
+        try suite.run("Core notifies when a volume-up key is swallowed at the cap", testInterceptorNotifiesWhenSwallowing)
         try suite.run("Core notifies when limit is enforced", testNotifyOnLimit)
         try suite.run("Core notify is throttled under rapid clamps", testNotifyThrottledUnderRapidClamps)
         try suite.run("Core does not notify when notify disabled", testNotifyDisabled)
@@ -240,6 +241,20 @@ private func testInterceptorReassertsCapWhenOver() throws {
     try expectTrue(engine.shouldSwallowVolumeUp(), "over the cap still swallows")
     try expectEqual(audio.volume, 40)
     try expectEqual(audio.setVolumeCalls, [40])
+}
+
+private func testInterceptorNotifiesWhenSwallowing() throws {
+    let audio = FakeAudioHardware(volume: 40) // already at the cap
+    let notifier = FakeNotifier()
+    let config = try VolumeLimiterConfig(limit: 40, notifyOnLimit: true)
+    let engine = try makeEngine(audio: audio, config: config, notifier: notifier)
+
+    try engine.start() // at the cap, nothing to clamp, so no notification yet
+    try expectEqual(notifier.events.count, 0)
+
+    // Swallowing a volume-up at the cap should still tell the user it was blocked.
+    try expectTrue(engine.shouldSwallowVolumeUp(), "swallow at cap")
+    try expectEqual(notifier.events.count, 1)
 }
 
 private func testRapidVolumeChangesClampEachTime() throws {

@@ -224,6 +224,10 @@ public final class VolumeLimiterEngine {
         if current > enforcement.limit {
             try? audio.setOutputVolume(deviceID: enforcement.deviceID, percent: enforcement.limit)
         }
+        // Give feedback that the volume-up was blocked at the cap. Without this the
+        // swallowed key produces no volume change, so the notification path would
+        // otherwise stay silent while the user keeps pressing. Throttled.
+        maybeNotifyLocked(from: current, to: enforcement.limit, deviceName: enforcement.deviceName)
         return true
     }
 

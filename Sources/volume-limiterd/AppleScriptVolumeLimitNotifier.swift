@@ -23,8 +23,17 @@ final class AppleScriptVolumeLimitNotifier: VolumeLimitNotifying {
     }
 
     private func deliverNotification(from currentVolume: Int, to limit: Int, deviceName: String) {
+        // When the volume was actually pulled down we report the drop; when a
+        // volume-up key was blocked at the cap (current == limit) there is nothing
+        // to "reduce", so we say it is being held at the limit instead.
+        let message: String
+        if currentVolume > limit {
+            message = "Volume was reduced from \(currentVolume)% to \(limit)% on \(escaped(deviceName))."
+        } else {
+            message = "Volume is held at the \(limit)% limit on \(escaped(deviceName))."
+        }
         let script = """
-        display notification "Volume was reduced from \(currentVolume)% to \(limit)% on \(escaped(deviceName))." with title "Volume Limiter" subtitle "Volume capped"
+        display notification "\(message)" with title "Volume Limiter" subtitle "Volume capped"
         """
 
         let process = Process()
