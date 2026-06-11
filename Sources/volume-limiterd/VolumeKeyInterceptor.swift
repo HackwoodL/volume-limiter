@@ -28,6 +28,24 @@ final class VolumeKeyInterceptor {
     private var retryTimer: Timer?
     private var promptedForPermission = false
 
+    private let stateLock = NSLock()
+    private var active = false
+
+    /// Whether the event tap is installed and intercepting volume keys. False
+    /// until Accessibility permission is granted. Thread-safe (read from the IPC
+    /// server thread; written from the tap thread).
+    var isActive: Bool {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return active
+    }
+
+    private func setActive(_ value: Bool) {
+        stateLock.lock()
+        active = value
+        stateLock.unlock()
+    }
+
     init(engine: VolumeLimiterEngine) {
         self.engine = engine
     }
@@ -81,6 +99,7 @@ final class VolumeKeyInterceptor {
         CGEvent.tapEnable(tap: tap, enable: true)
         self.tap = tap
         self.runLoopSource = source
+        setActive(true)
         return true
     }
 

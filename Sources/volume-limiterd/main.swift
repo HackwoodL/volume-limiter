@@ -37,6 +37,14 @@ let volumeKeyInterceptor = VolumeKeyInterceptor(engine: engine)
 volumeKeyInterceptor.start()
 #endif
 
+private func volumeKeyInterceptionActive() -> Bool? {
+    #if os(macOS)
+    return volumeKeyInterceptor.isActive
+    #else
+    return nil
+    #endif
+}
+
 let shutdownSemaphore = DispatchSemaphore(value: 0)
 installSignalHandler(SIGINT, semaphore: shutdownSemaphore)
 installSignalHandler(SIGTERM, semaphore: shutdownSemaphore)
@@ -152,7 +160,8 @@ private func response(id: String, status: VolumeLimiterStatus) -> IPCResponse {
             .sorted { ($0.name ?? $0.uid).localizedCaseInsensitiveCompare($1.name ?? $1.uid) == .orderedAscending },
         connectedDevices: status.connectedDevices
             .map { DeviceEntry(uid: $0.uid, name: $0.name) }
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
+        volumeKeyInterceptionActive: volumeKeyInterceptionActive()
     )
 }
 

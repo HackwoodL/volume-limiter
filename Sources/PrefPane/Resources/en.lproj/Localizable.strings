@@ -22,6 +22,9 @@
 "diagnostics.value" = "Diagnostics: %@";
 "warning.daemonNotRunning" = "Daemon not running";
 "warning.volumeControlUnavailable" = "Can't control the current output device's volume";
+"warning.accessibilityNeeded" = "Grant Accessibility to stop volume bursts";
+"accessibility.hint" = "On some Bluetooth headphones, rapidly pressing volume-up can briefly blast to 100% before the cap applies. Allow Volume Limiter under Accessibility so it can intercept the volume-up key at the cap.";
+"accessibility.button" = "Open Settings";
 "uninstall.button" = "Uninstall";
 "uninstall.confirm.title" = "Uninstall Volume Limiter?";
 "uninstall.confirm.body" = "This stops the background service and removes the preference pane, the LaunchAgent, and your saved limits. This can't be undone.";

@@ -22,6 +22,9 @@
 "diagnostics.value" = "诊断：%@";
 "warning.daemonNotRunning" = "守护进程未运行";
 "warning.volumeControlUnavailable" = "无法控制当前输出设备的音量";
+"warning.accessibilityNeeded" = "授予辅助功能权限以阻止爆音";
+"accessibility.hint" = "某些蓝牙耳机在快速连按音量加键时,会在上限生效前的一瞬间冲到 100%。请在「辅助功能」里允许 Volume Limiter,它便能在到达上限时拦截音量加键。";
+"accessibility.button" = "打开设置";
 "uninstall.button" = "卸载";
 "uninstall.confirm.title" = "卸载 Volume Limiter？";
 "uninstall.confirm.body" = "这会停止后台服务，并移除偏好设置面板、LaunchAgent 以及你保存的上限设置。此操作无法撤销。";

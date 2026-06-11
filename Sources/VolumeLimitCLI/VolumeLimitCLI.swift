@@ -287,6 +287,13 @@ private func fullStatusText(_ response: IPCResponse) throws -> String {
         ? "Per-device limits: none\n"
         : "Per-device limits:\n" + overrides.map { "  - \($0.name ?? $0.uid): \($0.limit)%" }.joined(separator: "\n") + "\n"
 
+    let interceptionText: String
+    switch response.volumeKeyInterceptionActive {
+    case .some(true): interceptionText = "on"
+    case .some(false): interceptionText = "off (grant Accessibility permission)"
+    case .none: interceptionText = "unsupported"
+    }
+
     return """
     Volume Limiter daemon: running
     Enabled: \(try onOff(required(response.enabled, field: "enabled")))
@@ -298,6 +305,7 @@ private func fullStatusText(_ response: IPCResponse) throws -> String {
     Device is headphone: \(try yesNo(required(response.deviceIsHeadphone, field: "deviceIsHeadphone")))
     Volume control available: \(try yesNo(required(response.volumeControlAvailable, field: "volumeControlAvailable")))
     Notify on limit: \(try onOff(required(response.notifyOnLimit, field: "notifyOnLimit")))
+    Volume-key interception: \(interceptionText)
     \(deviceLimitsText)\(diagnosticText)
     """
 }

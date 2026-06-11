@@ -105,6 +105,7 @@ public struct IPCResponse: Codable, Equatable {
     public var deviceLimitsEnabled: Bool?
     public var deviceLimits: [DeviceLimitEntry]?
     public var connectedDevices: [DeviceEntry]?
+    public var volumeKeyInterceptionActive: Bool?
 
     public init(
         ok: Bool,
@@ -124,7 +125,8 @@ public struct IPCResponse: Codable, Equatable {
         deviceHasLimitOverride: Bool? = nil,
         deviceLimitsEnabled: Bool? = nil,
         deviceLimits: [DeviceLimitEntry]? = nil,
-        connectedDevices: [DeviceEntry]? = nil
+        connectedDevices: [DeviceEntry]? = nil,
+        volumeKeyInterceptionActive: Bool? = nil
     ) {
         self.ok = ok
         self.id = id
@@ -144,6 +146,7 @@ public struct IPCResponse: Codable, Equatable {
         self.deviceLimitsEnabled = deviceLimitsEnabled
         self.deviceLimits = deviceLimits
         self.connectedDevices = connectedDevices
+        self.volumeKeyInterceptionActive = volumeKeyInterceptionActive
     }
 
     public static func success(id: String) -> IPCResponse {

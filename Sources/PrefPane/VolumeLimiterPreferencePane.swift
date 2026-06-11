@@ -172,6 +172,15 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         setLaunchAgentEnabled(true, control: sender)
     }
 
+    @objc private func openAccessibilityPressed(_ sender: NSButton) {
+        guard let url = URL(
+            string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+        ) else {
+            return
+        }
+        NSWorkspace.shared.open(url)
+    }
+
     @objc private func uninstallPressed(_ sender: NSButton) {
         let confirm = NSAlert()
         confirm.alertStyle = .critical
@@ -414,7 +423,8 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             daemonAvailable: true,
             limiterEnabled: limiterEnabled,
             volumeControlAvailable: response.volumeControlAvailable ?? false,
-            diagnostics: response.diagnostics ?? []
+            diagnostics: response.diagnostics ?? [],
+            interceptionActive: response.volumeKeyInterceptionActive
         )
     }
 
@@ -425,7 +435,8 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
             daemonAvailable: false,
             limiterEnabled: masterSwitch.state == .on,
             volumeControlAvailable: false,
-            diagnostics: [error.localizedDescription]
+            diagnostics: [error.localizedDescription],
+            interceptionActive: nil
         )
     }
 
@@ -433,7 +444,8 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         daemonAvailable: Bool,
         limiterEnabled: Bool,
         volumeControlAvailable: Bool,
-        diagnostics: [String]
+        diagnostics: [String],
+        interceptionActive: Bool?
     ) {
         masterSwitch.isEnabled = daemonAvailable
         headphoneOnlySwitch.isEnabled = daemonAvailable
@@ -451,6 +463,7 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
         if !daemonAvailable {
             warningTitleLabel.stringValue = localized("warning.daemonNotRunning")
             warningDetailLabel.stringValue = localized("daemon.startHint")
+            configureWarningButton(title: localized("start.button"), action: #selector(startDaemonPressed(_:)))
             warningActionButton.isHidden = false
             setHidden(warningCard, false)
         } else if limiterEnabled, !volumeControlAvailable {
@@ -460,11 +473,23 @@ public final class VolumeLimiterPreferencePane: NSPreferencePane {
                 : localizedFormat("diagnostics.value", diagnostics.joined(separator: " | "))
             warningActionButton.isHidden = true
             setHidden(warningCard, false)
+        } else if limiterEnabled, interceptionActive == false {
+            warningTitleLabel.stringValue = localized("warning.accessibilityNeeded")
+            warningDetailLabel.stringValue = localized("accessibility.hint")
+            configureWarningButton(title: localized("accessibility.button"), action: #selector(openAccessibilityPressed(_:)))
+            warningActionButton.isHidden = false
+            setHidden(warningCard, false)
         } else {
             warningActionButton.isHidden = true
             setHidden(warningCard, true)
         }
         warningDetailLabel.isHidden = warningDetailLabel.stringValue.isEmpty
+    }
+
+    private func configureWarningButton(title: String, action: Selector) {
+        warningActionButton.title = title
+        warningActionButton.target = self
+        warningActionButton.action = action
     }
 
     private func setHidden(_ view: NSView?, _ hidden: Bool) {
