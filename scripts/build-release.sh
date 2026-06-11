@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="${1:-0.1.0}"
+VERSION="${1:-0.1.1}"
 RELEASE_DIR="$ROOT/.build/release-artifacts"
 UNIVERSAL_BUILD_DIR="$ROOT/.build/release-universal"
 CLI_DIR="$RELEASE_DIR/volume-limiter-cli-v$VERSION"

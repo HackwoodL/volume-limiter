@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="${1:-0.1.0}"
+VERSION="${1:-0.1.1}"
 OUT_DIR="$ROOT/.build/dmg"
 STAGE="$OUT_DIR/stage"
 DMG="$OUT_DIR/VolumeLimiter-$VERSION.dmg"
