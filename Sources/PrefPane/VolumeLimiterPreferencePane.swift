@@ -1016,18 +1016,9 @@ private func localizedFormat(_ key: String, _ arguments: CVarArg...) -> String {
 }
 
 private func localizationBundle() -> Bundle {
-    let preferredLanguage = Locale.preferredLanguages.first?.lowercased() ?? ""
-    let localization = preferredLanguage.hasPrefix("zh") ? "zh-Hans" : "en"
-    let baseBundle = Bundle(for: VolumeLimiterPreferencePane.self)
-
-    guard
-        let path = baseBundle.path(forResource: localization, ofType: "lproj"),
-        let bundle = Bundle(path: path)
-    else {
-        return baseBundle
-    }
-
-    return bundle
+    let base = Bundle(for: VolumeLimiterPreferencePane.self)
+    let lang = Bundle.preferredLocalizations(from: base.localizations, forPreferences: Locale.preferredLanguages).first ?? "en"
+    return base.path(forResource: lang, ofType: "lproj").flatMap(Bundle.init) ?? base
 }
 
 private enum LaunchAgentManager {
